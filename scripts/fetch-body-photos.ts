@@ -1,6 +1,7 @@
 /**
  * Downloads a real, freely-licensed photo for every body type from Wikimedia Commons,
- * crops it to the 4:3 tile shape, stores it in public/uploads/body-types/ and makes it
+ * crops it to the 4:3 tile shape, stores it in public/body-types/ (committed to git, so the
+ * photos travel with the code to every server) and makes it
  * the home-page tile photo. Photographer credits are saved and shown on /photo-credits.
  *
  *   npx tsx scripts/fetch-body-photos.ts            # fills body types that have no photo yet
@@ -10,7 +11,7 @@
  * Photos an admin uploads in Admin → Body type photos are never overwritten without --force.
  */
 import "dotenv/config";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, readdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -40,7 +41,7 @@ const QUERIES: Record<string, Array<{ q: string; must: string[] }>> = {
   THREE_WHEELER: [{ q: "Bajaj RE auto rickshaw", must: ["bajaj"] }, { q: "bajaji Tanzania", must: ["bajaj"] }, { q: "auto rickshaw", must: ["rickshaw"] }],
 };
 
-const BAD = /\b(interior|inside|cockpit|dashboard|dash|engine|motor ?room|badge|emblem|logo|wheel|rim|seat|steering|boot|trunk|tail ?light|headlight|lamp|detail|crash|wreck|accident|burn|model ?car|toy|diecast|scale|lego|police|ambulance|fire ?truck|military|army|rally|race|racing|drift|modified|tuned|kit|grille|mirror|key|manual|brochure|advert|poster|sketch|drawing|render|cutaway|chassis|frame|museum)\b/i;
+const BAD = /\b(interior|inside|cockpit|dashboard|dash|engine|motor ?room|badge|emblem|logo|wheel|rim|seat|steering|boot|trunk|tail ?light|headlight|lamp|detail|crash|wreck|accident|burn|model ?car|toy|diecast|scale|lego|police|polis|patrol|riot|ambulance|fire|firefighting|rescue|emergency|brigade|military|army|defen[cs]e|ministry|government|un|unhcr|unicef|ngo|red ?cross|airport|tow ?truck|recovery|crane|tanker|garbage|refuse|dump|mixer|camper|motorhome|limousine|hearse|taxi|uber|rally|race|racing|drift|modified|tuned|kit|grille|mirror|key|manual|brochure|advert|poster|sketch|drawing|render|cutaway|chassis|frame|museum)\b/i;
 const GOOD = /\b(front|side|three[- ]quarter|3\/4|exterior|left|right|profile)\b/i;
 const OK_LICENSE = /^(cc0|public domain|pd|cc[- ]by(-sa)?[- ]\d(\.\d)?)/i;
 
@@ -112,7 +113,7 @@ async function main() {
   ]);
   const photos = { ...((photosRow?.value as Record<string, string>) ?? {}) };
   const credits = { ...((creditsRow?.value as Record<string, unknown>) ?? {}) };
-  const dir = path.join(process.cwd(), "public", "uploads", "body-types");
+  const dir = path.join(process.cwd(), "public", "body-types");
   await mkdir(dir, { recursive: true });
 
   let done = 0;
@@ -133,8 +134,10 @@ async function main() {
       const raw = await download(picked);
       const out = await sharp(raw).rotate().resize(960, 720, { fit: "cover", position: sharp.strategy.attention }).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
       const file = `${type.toLowerCase()}-${Date.now().toString(36)}.jpg`; // new name each time so browsers never show a stale copy
+      // remove this type's previous photo so old files don't pile up in git
+      for (const old of await readdir(dir)) if (old.startsWith(`${type.toLowerCase()}-`)) await unlink(path.join(dir, old)).catch(() => {});
       await writeFile(path.join(dir, file), out);
-      photos[type] = `/uploads/body-types/${file}`;
+      photos[type] = `/body-types/${file}`;
       credits[type] = { url: photos[type], title: picked.title.replace(/^File:/, ""), artist: picked.artist, license: picked.license, licenseUrl: picked.licenseUrl ?? null, source: picked.page };
       done++;
       console.log(`✔ ${type.padEnd(14)} ${picked.title.replace(/^File:/, "")}  (${picked.license}, ${picked.artist})`);

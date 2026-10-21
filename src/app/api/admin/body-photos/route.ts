@@ -5,7 +5,7 @@ import { setBodyTypePhotos } from "@/lib/settings";
 import { json, jsonError } from "@/lib/json";
 import { BodyType } from "@/generated/prisma/enums";
 
-const schema = z.record(z.nativeEnum(BodyType), z.string().trim().refine((u) => u === "" || u.startsWith("https://") || u.startsWith("/uploads/"), "Invalid image").optional());
+const schema = z.record(z.nativeEnum(BodyType), z.string().trim().refine((u) => u === "" || u.startsWith("https://") || u.startsWith("/uploads/") || u.startsWith("/body-types/"), "Invalid image").optional());
 
 /** PUT { SUV: url, SEDAN: url, … } — admin chooses the photo shown on each body-type tile. */
 export async function PUT(req: Request) {

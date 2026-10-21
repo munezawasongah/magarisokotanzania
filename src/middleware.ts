@@ -39,5 +39,5 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // everything except static assets
-  matcher: ["/((?!_next/static|_next/image|placeholders/|uploads/|brand/|icon\\.png|apple-icon\\.png|manifest\\.webmanifest|favicon\\.ico|robots\\.txt|sitemap\\.xml).*)"],
+  matcher: ["/((?!_next/static|_next/image|placeholders/|uploads/|body-types/|brand/|icon\\.png|apple-icon\\.png|manifest\\.webmanifest|favicon\\.ico|robots\\.txt|sitemap\\.xml).*)"],
 };
