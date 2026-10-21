@@ -32,3 +32,17 @@ export async function setBodyTypePhotos(photos: BodyTypePhotos) {
     update: { value: clean },
   });
 }
+
+export type PhotoCredit = { url: string; title: string; artist: string; license: string; licenseUrl: string | null; source: string };
+
+/** Credits for downloaded Wikimedia photos still in use (a photo an admin replaced drops its credit). */
+export async function getBodyTypePhotoCredits(): Promise<Array<PhotoCredit & { body: string }>> {
+  const [photos, row] = await Promise.all([
+    getBodyTypePhotos(),
+    prisma.siteSetting.findUnique({ where: { key: "bodyTypePhotoCredits" } }).catch(() => null),
+  ]);
+  const credits = (row?.value as Record<string, PhotoCredit> | undefined) ?? {};
+  return Object.entries(credits)
+    .filter(([body, c]) => c && photos[body] === c.url)
+    .map(([body, c]) => ({ body, ...c }));
+}

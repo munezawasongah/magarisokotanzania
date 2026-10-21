@@ -12,7 +12,7 @@ export async function Footer() {
     { title: dict.nav.parts, links: [["Toyota", "/parts?make=toyota"], ["Nissan", "/parts?make=nissan"], ["Subaru", "/parts?make=subaru"], [dict.enums.PartCategory.BRAKES, "/parts?category=BRAKES"], [dict.enums.PartCategory.TYRES_WHEELS, "/parts?category=TYRES_WHEELS"]] },
     { title: dict.nav.services, links: [[dict.enums.ServiceCategory.PRE_PURCHASE_INSPECTION, "/services?category=PRE_PURCHASE_INSPECTION"], [dict.enums.ServiceCategory.TOWING, "/services?category=TOWING"], [dict.enums.ServiceCategory.CLEARING_FORWARDING, "/services?category=CLEARING_FORWARDING"], [dict.enums.ServiceCategory.FINANCING, "/services?category=FINANCING"]] },
     { title: SITE.name, links: [[dict.nav.sell, "/sell"], [dict.nav.dealers, "/dealers"], [locale === "sw" ? "Bei za matangazo" : "Pricing for businesses", "/pricing"], [dict.nav.login, "/login"]] },
-    { title: locale === "sw" ? "Sheria" : "Legal", links: [[dict.legal.terms, "/terms"], [dict.legal.privacy, "/privacy"], [dict.legal.safety, "/safety"]] },
+    { title: locale === "sw" ? "Sheria" : "Legal", links: [[dict.legal.terms, "/terms"], [dict.legal.privacy, "/privacy"], [dict.legal.safety, "/safety"], [locale === "sw" ? "Wamiliki wa picha" : "Photo credits", "/photo-credits"]] },
   ];
   return (
     <footer className="mt-20 bg-ink-950 text-center text-ink-300">

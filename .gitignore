@@ -8,4 +8,5 @@ next-env.d.ts
 .vercel
 src/generated
 
+# user uploads (local development image storage)
 public/uploads/
