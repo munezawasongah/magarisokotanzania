@@ -1,0 +1,1094 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  MagariSOKO Tanzania — multi-vendor automotive marketplace (Jatelo Technologies)
+//  PostgreSQL + Prisma.  Money is stored as BigInt TZS (no decimals; TZS has
+//  no cents in practice). USD values are stored as Int whole dollars.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ═════════════════════════════  ENUMS  ══════════════════════════════════════
+
+enum Role {
+  BUYER
+  SELLER            // private individual seller
+  DEALER            // dealership staff/owner
+  IMPORTER          // import-on-order business
+  PARTS_VENDOR
+  SERVICE_PROVIDER  // mechanics, inspection centres, towing, insurance/finance agents
+  ADMIN
+  MODERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum Locale {
+  en
+  sw
+}
+
+enum BusinessType {
+  PRIVATE_SELLER   // individual seller's mini-site
+  DEALERSHIP
+  CAR_YARD         // open car yard (cars displayed on a lot)
+  IMPORTER
+  PARTS_VENDOR
+  SERVICE_PROVIDER
+  INSPECTION_CENTER
+  FINANCE_INSURANCE
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BusinessMemberRole {
+  OWNER
+  MANAGER
+  SALES
+}
+
+enum SellerType {
+  INDIVIDUAL
+  DEALER
+  YARD
+  IMPORTER
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  SOLD
+  EXPIRED
+  ARCHIVED
+}
+
+enum VehicleCondition {
+  NEW
+  FOREIGN_USED   // "used abroad", freshly imported, not yet registered in TZ
+  LOCALLY_USED   // already registered/used in Tanzania
+}
+
+enum BodyType {
+  SEDAN
+  HATCHBACK
+  WAGON
+  SUV
+  PICKUP
+  VAN
+  MINIVAN
+  MINIBUS
+  BUS
+  TRUCK
+  COUPE
+  CONVERTIBLE
+  MOTORCYCLE
+  THREE_WHEELER
+}
+
+enum Transmission {
+  AUTOMATIC
+  MANUAL
+  CVT
+  SEMI_AUTOMATIC
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  HYBRID
+  PLUG_IN_HYBRID
+  ELECTRIC
+  LPG_CNG
+}
+
+enum Steering {
+  RHD
+  LHD
+}
+
+enum Drivetrain {
+  FWD
+  RWD
+  AWD
+  FOUR_WD
+}
+
+enum OriginCountry {
+  JAPAN
+  UNITED_KINGDOM
+  SOUTH_AFRICA
+  UAE
+  SINGAPORE
+  THAILAND
+  GERMANY
+  USA
+  CHINA
+  OTHER
+}
+
+enum PartCategory {
+  ENGINE
+  TRANSMISSION
+  BRAKES
+  SUSPENSION
+  STEERING
+  ELECTRICAL
+  LIGHTING
+  BODY
+  COOLING
+  EXHAUST
+  FILTERS
+  FUEL_SYSTEM
+  TYRES_WHEELS
+  INTERIOR
+  ACCESSORIES
+  FLUIDS
+}
+
+enum PartCondition {
+  NEW
+  USED
+  REFURBISHED
+}
+
+enum PartAuthenticity {
+  GENUINE_OEM
+  OEM_EQUIVALENT
+  AFTERMARKET
+}
+
+enum ServiceCategory {
+  GENERAL_REPAIR
+  AUTO_ELECTRIC
+  DIAGNOSTICS
+  BODYWORK_PAINT
+  DETAILING
+  TOWING
+  TYRES_ALIGNMENT
+  AIR_CONDITIONING
+  PRE_PURCHASE_INSPECTION
+  CLEARING_FORWARDING
+  INSURANCE
+  FINANCING
+}
+
+enum InquiryType {
+  GENERAL
+  TEST_DRIVE
+  INSPECTION
+  FINANCING
+  PRICE_OFFER
+  PART_AVAILABILITY
+  SERVICE_BOOKING
+}
+
+enum InquiryChannel {
+  FORM
+  WHATSAPP
+  CALL
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CLOSED_WON
+  CLOSED_LOST
+  SPAM
+}
+
+enum ListingEventType {
+  VIEW
+  WHATSAPP_CLICK
+  CALL_CLICK
+  SHARE
+  FAVORITE
+  INQUIRY
+}
+
+enum PromotionType {
+  FEATURED        // pinned to top of search + badge
+  SPONSORED       // appears in sponsored carousel on home/search
+  BUMP            // refreshes publishedAt (moves up "newest")
+  HOMEPAGE_SPOTLIGHT
+}
+
+enum PaymentPurpose {
+  PROMOTION
+  SUBSCRIPTION
+  INSPECTION_FEE
+  AD_PLACEMENT
+  LISTING_FEE
+  REGISTRATION_FEE
+}
+
+enum RegistrationStatus {
+  AWAITING_PAYMENT   // details saved, fee not yet paid
+  PAYMENT_SUBMITTED  // paid online or manual reference submitted — admin must verify
+  APPROVED           // payment verified, mini-site created
+  REJECTED
+}
+
+enum RegistrationAccountType {
+  SELLER            // private seller
+  DEALER
+  YARD              // car yard
+  IMPORTER
+  PARTS_VENDOR
+  SERVICE_PROVIDER
+}
+
+enum PaymentProvider {
+  MPESA          // Vodacom M-Pesa
+  TIGO_PESA      // Mixx by Yas (formerly Tigo Pesa)
+  AIRTEL_MONEY
+  HALOPESA
+  AZAMPESA
+  CARD
+}
+
+enum PaymentGateway {
+  AZAMPAY
+  SELCOM
+  DPO
+  MANUAL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum AdSlot {
+  HOME_HERO
+  HOME_INLINE
+  SEARCH_TOP
+  SEARCH_SIDEBAR
+  LISTING_DETAIL
+  PARTS_TOP
+}
+
+enum InspectionStatus {
+  REQUESTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReportReason {
+  SCAM
+  WRONG_INFO
+  DUPLICATE
+  SOLD
+  OFFENSIVE
+  OTHER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum BlockType {
+  PHONE       // E.164 — matches account phone, listing contact/WhatsApp, payment wallet, inquiry phone
+  EMAIL
+  DEVICE      // device fingerprint hash (gs_did cookie + user agent)
+  CHASSIS
+  IMAGE_HASH  // 64-bit perceptual hash (dHash) of a photo, stored as decimal string
+  KEYWORD     // phrase that holds any listing/inquiry containing it
+}
+
+enum FlagEntity {
+  LISTING
+  USER
+  INQUIRY
+}
+
+enum OtpPurpose {
+  LOGIN
+  VERIFY_PHONE
+  RESET_PASSWORD
+}
+
+// ═════════════════════════════  LOCATIONS  ══════════════════════════════════
+
+model Region {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  nameSw    String?
+  slug      String     @unique
+  zone      String     // Coastal, Northern, Lake, Central, Southern Highlands, Southern, Western, Zanzibar
+  isZanzibar Boolean   @default(false)
+  sortOrder Int        @default(0)
+  districts District[]
+
+  users      User[]
+  businesses Business[]
+  listings   Listing[]
+  parts      SparePart[]
+}
+
+model District {
+  id       Int    @id @default(autoincrement())
+  name     String
+  slug     String
+  regionId Int
+  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  users      User[]
+  businesses Business[]
+  listings   Listing[]
+  parts      SparePart[]
+
+  @@unique([regionId, slug])
+  @@index([regionId])
+}
+
+// ═════════════════════════════  USERS & AUTH  ═══════════════════════════════
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  email         String?    @unique
+  phone         String?    @unique // E.164, e.g. +255712345678
+  whatsapp      String?             // E.164; defaults to phone when null
+  passwordHash  String?
+  phoneVerified DateTime?
+  emailVerified DateTime?
+  roles         Role[]     @default([BUYER])
+  status        UserStatus @default(ACTIVE)
+  locale        Locale     @default(en)
+  avatarUrl     String?
+  regionId      Int?
+  districtId    Int?
+  region        Region?    @relation(fields: [regionId], references: [id])
+  district      District?  @relation(fields: [districtId], references: [id])
+  lastLoginAt   DateTime?
+  /// When the user accepted the Terms of Use + Privacy Policy (PDPA consent record)
+  termsAcceptedAt DateTime?
+  /// Version (date) of the legal documents the user accepted
+  termsVersion    String?
+  // ── fraud & trust ──
+  riskScore       Int       @default(0)
+  isShadowBanned  Boolean   @default(false) // listings never go live, inquiries silently held
+  bannedAt        DateTime?
+  banReason       String?
+  /// Set when the user pays with mobile money: the wallet is tied to a NIDA-registered SIM
+  walletVerifiedAt DateTime?
+  walletMsisdn    String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  memberships      BusinessMember[]
+  listings         Listing[]
+  parts            SparePart[]
+  inquiriesSent    Inquiry[]          @relation("InquiryBuyer")
+  inquiriesRecv    Inquiry[]          @relation("InquiryRecipient")
+  inquiryMessages  InquiryMessage[]
+  favorites        Favorite[]
+  savedSearches    SavedSearch[]
+  payments         Payment[]
+  inspections      InspectionRequest[]
+  reports          ListingReport[]
+  auditLogs        AuditLog[]
+  devices          UserDevice[]
+  blocklistAdded   Blocklist[]
+  registration     SellerRegistration?
+
+  @@index([status])
+}
+
+model OtpCode {
+  id         String     @id @default(cuid())
+  phone      String
+  codeHash   String
+  purpose    OtpPurpose @default(LOGIN)
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  ipHash     String?
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, purpose, createdAt])
+}
+
+// ═════════════════════════════  BUSINESSES  ═════════════════════════════════
+// One model covers Dealerships, Importers, Parts Vendors, Service Providers,
+// Inspection Centres and Finance/Insurance agents (discriminated by `type`).
+
+model Business {
+  id                 String             @id @default(cuid())
+  type               BusinessType
+  name               String
+  slug               String             @unique
+  tagline            String?
+  description        String?
+  logoUrl            String?
+  coverUrl           String?
+  phone              String             // E.164 +255…
+  whatsapp           String?
+  email              String?
+  website            String?
+  address            String?
+  latitude           Float?
+  longitude          Float?
+  regionId           Int
+  districtId         Int?
+  region             Region             @relation(fields: [regionId], references: [id])
+  district           District?          @relation(fields: [districtId], references: [id])
+  tin                String?            // TRA Taxpayer Identification Number
+  brelaRegNo         String?            // BRELA company/business registration no.
+  businessLicenseNo  String?
+  verification       VerificationStatus @default(UNVERIFIED)
+  verifiedAt         DateTime?
+  verificationNote   String?
+  openingHours       Json?              // { mon: "08:00-18:00", ... }
+  importCountries    OriginCountry[]    // importers: where they source from
+  ratingAvg          Float              @default(0)
+  ratingCount        Int                @default(0)
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  members       BusinessMember[]
+  listings      Listing[]
+  parts         SparePart[]
+  services      ServiceOffering[]
+  inquiries     Inquiry[]
+  subscriptions Subscription[]
+  payments      Payment[]
+  inspections   InspectionRequest[]
+
+  @@index([type, verification, isActive])
+  @@index([regionId])
+}
+
+model BusinessMember {
+  id         String             @id @default(cuid())
+  businessId String
+  userId     String
+  role       BusinessMemberRole @default(SALES)
+  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime           @default(now())
+
+  @@unique([businessId, userId])
+  @@index([userId])
+}
+
+model ServiceOffering {
+  id            String          @id @default(cuid())
+  businessId    String
+  business      Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category      ServiceCategory
+  title         String
+  description   String?
+  priceFromTzs  BigInt          // every service must show a starting price
+  mobileService Boolean         @default(false) // comes to the customer
+  makes         String[]        // specialisations, e.g. ["Toyota","Subaru"]
+  createdAt     DateTime        @default(now())
+
+  @@index([category])
+  @@index([businessId])
+}
+
+// ═════════════════════════════  VEHICLE TAXONOMY  ═══════════════════════════
+
+model Make {
+  id        Int            @id @default(autoincrement())
+  name      String         @unique
+  slug      String         @unique
+  country   String?
+  isPopular Boolean        @default(false)
+  sortOrder Int            @default(0)
+  models    VehicleModel[]
+  listings  Listing[]
+  fitments  PartFitment[]
+}
+
+model VehicleModel {
+  id              Int           @id @default(autoincrement())
+  makeId          Int
+  make            Make          @relation(fields: [makeId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String
+  defaultBodyType BodyType?
+  listings        Listing[]
+  fitments        PartFitment[]
+
+  @@unique([makeId, slug])
+  @@index([makeId])
+}
+
+// ═════════════════════════════  VEHICLE LISTINGS  ═══════════════════════════
+
+model Listing {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  description String
+  status      ListingStatus @default(PENDING_REVIEW)
+  rejectionReason String?
+
+  // ownership
+  sellerId    String
+  seller      User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  businessId  String?
+  business    Business?     @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  sellerType  SellerType    @default(INDIVIDUAL)
+  contactPhone    String    // E.164 shown on the listing
+  contactWhatsapp String?
+
+  // vehicle
+  makeId       Int
+  make         Make             @relation(fields: [makeId], references: [id])
+  modelId      Int
+  model        VehicleModel     @relation(fields: [modelId], references: [id])
+  trim         String?
+  year         Int
+  condition    VehicleCondition
+  bodyType     BodyType
+  transmission Transmission
+  fuelType     FuelType
+  steering     Steering         @default(RHD)
+  drivetrain   Drivetrain?
+  engineCc     Int?
+  mileageKm    Int              // required: odometer reading in km (0 for brand-new)
+  colorExterior String?
+  colorInterior String?
+  doors        Int?
+  seats        Int?
+  groundClearanceMm Int?
+  registrationSeries String?    // TZ plate series letter e.g. "D", "E" — hints at registration age
+  chassisNumber String?         // never displayed publicly
+  features     String[]         // ["Sunroof","Reverse camera","Leather seats",...]
+
+  // pricing
+  priceTzs        BigInt
+  priceNegotiable Boolean  @default(true)
+  showUsdPrice    Boolean  @default(false)
+
+  // import-on-order (dealers/importers only)
+  isImportOnOrder  Boolean        @default(false)
+  originCountry    OriginCountry?
+  fobUsd           Int?
+  freightUsd       Int?
+  insuranceUsd     Int?
+  landedCostTzs    BigInt?         // computed estimate (duties + clearing) cached at save time
+  landedCostBreakdown Json?
+  etaDays          Int?            // estimated days to delivery in TZ
+
+  // location
+  regionId    Int
+  region      Region    @relation(fields: [regionId], references: [id])
+  districtId  Int?
+  district    District? @relation(fields: [districtId], references: [id])
+  locationAddress String?  // where the car can be viewed (street / landmark)
+  latitude        Float?
+  longitude       Float?
+
+  // promotion & stats (denormalised for fast sort)
+  isFeatured    Boolean   @default(false)
+  featuredUntil DateTime?
+  isSponsored   Boolean   @default(false)
+  sponsoredUntil DateTime?
+  viewCount     Int       @default(0)
+  leadCount     Int       @default(0)
+  whatsappClicks Int      @default(0)
+  callClicks    Int       @default(0)
+
+  // fraud scoring (see src/server/fraud)
+  riskScore       Int       @default(0)
+  riskLevel       RiskLevel @default(LOW)
+  riskReasons     Json?
+  riskCheckedAt   DateTime?
+  fraudReviewedAt DateTime?
+  fraudReviewedBy String?
+
+  // full-text search: `searchText` is maintained by the app (make, model, trim,
+  // body, fuel...), `search` is a generated tsvector column created in SQL.
+  searchText  String    @default("")
+  search      Unsupported("tsvector")?
+
+  publishedAt DateTime?
+  bumpedAt    DateTime?
+  expiresAt   DateTime?
+  soldAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  images      ListingImage[]
+  inquiries   Inquiry[]
+  events      ListingEvent[]
+  favorites   Favorite[]
+  promotions  Promotion[]
+  inspections InspectionRequest[]
+  reports     ListingReport[]
+
+  @@index([status, isFeatured, publishedAt])
+  @@index([status, makeId, modelId])
+  @@index([status, priceTzs])
+  @@index([status, year])
+  @@index([status, regionId])
+  @@index([status, bodyType])
+  @@index([sellerId])
+  @@index([businessId])
+  @@index([riskLevel, status])
+  @@index([contactPhone])
+  @@index([chassisNumber])
+}
+
+model ListingImage {
+  id        String  @id @default(cuid())
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url       String
+  publicId  String? // Cloudinary public_id / S3 key, for deletion
+  width     Int?
+  height    Int?
+  alt       String?
+  sortOrder Int     @default(0)
+  /// 64-bit perceptual hash (dHash) for duplicate / stolen photo detection
+  phash     BigInt?
+
+  @@index([listingId, sortOrder])
+  @@index([phash])
+}
+
+// ═════════════════════════════  SPARE PARTS  ════════════════════════════════
+
+model SparePart {
+  id           String           @id @default(cuid())
+  slug         String           @unique
+  title        String
+  description  String?
+  category     PartCategory
+  condition    PartCondition    @default(NEW)
+  authenticity PartAuthenticity @default(AFTERMARKET)
+  brand        String?          // Denso, Bosch, Toyota Genuine...
+  partNumber   String?
+  oemNumber    String?
+  priceTzs     BigInt
+  stockQty     Int              @default(1)
+  warrantyDays Int?
+  status       ListingStatus    @default(ACTIVE)
+
+  sellerId   String
+  seller     User      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  regionId   Int
+  region     Region    @relation(fields: [regionId], references: [id])
+  districtId Int?
+  district   District? @relation(fields: [districtId], references: [id])
+
+  images     String[]
+  isFeatured Boolean   @default(false)
+  viewCount  Int       @default(0)
+  searchText String    @default("")
+  search     Unsupported("tsvector")?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  fitments  PartFitment[]
+  inquiries Inquiry[]
+  favorites Favorite[]
+
+  @@index([status, category])
+  @@index([partNumber])
+  @@index([oemNumber])
+  @@index([businessId])
+}
+
+/// Which vehicles a part fits. modelId null = fits every model of the make.
+model PartFitment {
+  id         Int           @id @default(autoincrement())
+  partId     String
+  part       SparePart     @relation(fields: [partId], references: [id], onDelete: Cascade)
+  makeId     Int
+  make       Make          @relation(fields: [makeId], references: [id])
+  modelId    Int?
+  model      VehicleModel? @relation(fields: [modelId], references: [id])
+  yearFrom   Int?
+  yearTo     Int?
+  engineCode String?       // e.g. "1NZ-FE", "2KD-FTV"
+
+  @@index([makeId, modelId, yearFrom, yearTo])
+  @@index([partId])
+}
+
+// ═════════════════════════════  LEADS & ENGAGEMENT  ═════════════════════════
+
+model Inquiry {
+  id          String         @id @default(cuid())
+  type        InquiryType    @default(GENERAL)
+  channel     InquiryChannel @default(FORM)
+  status      InquiryStatus  @default(NEW)
+
+  listingId   String?
+  listing     Listing?       @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  partId      String?
+  part        SparePart?     @relation(fields: [partId], references: [id], onDelete: SetNull)
+  businessId  String?
+  business    Business?      @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  recipientId String
+  recipient   User           @relation("InquiryRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  buyerId     String?
+  buyer       User?          @relation("InquiryBuyer", fields: [buyerId], references: [id], onDelete: SetNull)
+
+  name          String
+  phone         String       // E.164
+  email         String?
+  message       String
+  offerTzs      BigInt?
+  preferredDate DateTime?
+  ipHash        String?
+  sellerNote    String?
+  riskScore     Int          @default(0)
+  /// Held inquiries (blocked sender / scam wording) are not shown or sent to the seller
+  isHeld        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  messages InquiryMessage[]
+
+  @@index([recipientId, status, createdAt])
+  @@index([listingId])
+  @@index([phone, createdAt])
+}
+
+model InquiryMessage {
+  id        String   @id @default(cuid())
+  inquiryId String
+  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  senderId  String?
+  sender    User?    @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([inquiryId, createdAt])
+}
+
+model ListingEvent {
+  id          BigInt           @id @default(autoincrement())
+  listingId   String
+  listing     Listing          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  type        ListingEventType
+  sessionHash String?
+  createdAt   DateTime         @default(now())
+
+  @@index([listingId, type, createdAt])
+}
+
+model Favorite {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listingId String?
+  listing   Listing?   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  partId    String?
+  part      SparePart? @relation(fields: [partId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, listingId])
+  @@unique([userId, partId])
+}
+
+model SavedSearch {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  query     String   // URL query string of the search page
+  alertSms  Boolean  @default(false)
+  lastAlertAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model InspectionRequest {
+  id          String           @id @default(cuid())
+  listingId   String
+  listing     Listing          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId     String
+  buyer       User             @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  providerId  String?
+  provider    Business?        @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  status      InspectionStatus @default(REQUESTED)
+  scheduledAt DateTime?
+  feeTzs      BigInt?
+  reportUrl   String?
+  notes       String?
+  createdAt   DateTime         @default(now())
+
+  @@index([listingId])
+}
+
+model ListingReport {
+  id         String       @id @default(cuid())
+  listingId  String
+  listing    Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reporterId String?
+  reporter   User?        @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+  reason     ReportReason
+  details    String?
+  resolved   Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+
+  @@index([resolved, createdAt])
+}
+
+// ═════════════════════════════  MONETISATION  ═══════════════════════════════
+
+model Plan {
+  id                 String       @id @default(cuid())
+  code               String       @unique // e.g. DEALER_STARTER
+  name               String
+  businessType       BusinessType
+  priceTzsMonthly    BigInt
+  priceTzsYearly     BigInt?
+  maxActiveListings  Int          // -1 = unlimited
+  featuredCredits    Int          @default(0) // free featured slots per month
+  showroomPage       Boolean      @default(true)
+  leadAnalytics      Boolean      @default(false)
+  verifiedBadge      Boolean      @default(false)
+  isActive           Boolean      @default(true)
+  sortOrder          Int          @default(0)
+  subscriptions      Subscription[]
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  businessId         String
+  business           Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               Plan               @relation(fields: [planId], references: [id])
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  featuredCreditsUsed Int               @default(0)
+  cancelAtPeriodEnd  Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  payments           Payment[]
+
+  @@index([businessId, status])
+}
+
+/// Price list for one-off promotions (admin-editable).
+model PromotionProduct {
+  id        String        @id @default(cuid())
+  code      String        @unique // FEATURED_7D, FEATURED_30D, BUMP, SPONSORED_7D...
+  type      PromotionType
+  name      String
+  nameSw    String?
+  days      Int
+  priceTzs  BigInt
+  isActive  Boolean       @default(true)
+  sortOrder Int           @default(0)
+}
+
+model Promotion {
+  id        String        @id @default(cuid())
+  listingId String
+  listing   Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  type      PromotionType
+  startsAt  DateTime
+  endsAt    DateTime
+  paymentId String?       @unique
+  payment   Payment?      @relation(fields: [paymentId], references: [id])
+  createdAt DateTime      @default(now())
+
+  @@index([listingId, endsAt])
+}
+
+model Payment {
+  id             String          @id @default(cuid())
+  reference      String          @unique // our external id sent to the gateway
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  businessId     String?
+  business       Business?       @relation(fields: [businessId], references: [id])
+  subscriptionId String?
+  subscription   Subscription?   @relation(fields: [subscriptionId], references: [id])
+  purpose        PaymentPurpose
+  amountTzs      BigInt
+  provider       PaymentProvider
+  gateway        PaymentGateway
+  status         PaymentStatus   @default(PENDING)
+  msisdn         String?         // payer phone, E.164
+  gatewayRef     String?         // transaction id returned by gateway
+  checkoutUrl    String?         // card redirect URL (DPO/Selcom)
+  metadata       Json?           // { productCode, listingId, planId, ... }
+  rawResponse    Json?
+  rawCallback    Json?
+  failureReason  String?
+  paidAt         DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  promotion      Promotion?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AdPlacement {
+  id          String   @id @default(cuid())
+  slot        AdSlot
+  advertiser  String
+  title       String
+  imageUrl    String
+  linkUrl     String
+  startsAt    DateTime
+  endsAt      DateTime
+  priceTzs    BigInt?
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([slot, isActive, startsAt, endsAt])
+}
+
+// ═════════════════════════════  PLATFORM  ═══════════════════════════════════
+
+model ExchangeRate {
+  id        Int      @id @default(autoincrement())
+  base      String   @default("USD")
+  quote     String   @default("TZS")
+  rate      Float
+  source    String
+  fetchedAt DateTime @default(now())
+
+  @@index([base, quote, fetchedAt])
+}
+
+/// Key/value store for admin-editable settings (import tax rules, etc.)
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ═════════════════════════════  FRAUD PREVENTION  ═════════════════════════
+
+/// Devices each account has used (for linking multi-account and banned-device abuse)
+model UserDevice {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceHash String
+  ipHash     String?
+  userAgent  String?
+  firstSeen  DateTime @default(now())
+  lastSeen   DateTime @default(now())
+
+  @@unique([userId, deviceHash])
+  @@index([deviceHash])
+}
+
+/// Banned identifiers and phrases. A hit makes the listing/inquiry HIGH risk.
+model Blocklist {
+  id           String    @id @default(cuid())
+  type         BlockType
+  value        String
+  reason       String?
+  sourceUserId String?   // the banned account this entry came from
+  createdById  String?
+  createdBy    User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([type, value])
+  @@index([sourceUserId])
+}
+
+/// Individual risk signals raised by the fraud engine (audit trail for moderators)
+model FraudFlag {
+  id        String     @id @default(cuid())
+  entity    FlagEntity
+  entityId  String
+  userId    String?
+  signal    String
+  points    Int
+  detail    Json?
+  resolved  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([resolved, createdAt])
+}
+
+// ═════════════════════════════  SELLER REGISTRATION  ══════════════════════
+
+/// Paid registration for sellers, dealers, importers, parts vendors and service
+/// providers. An admin verifies the fee payment; approval creates the mini-site.
+model SellerRegistration {
+  id              String                  @id @default(cuid())
+  userId          String                  @unique
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountType     RegistrationAccountType
+  status          RegistrationStatus      @default(AWAITING_PAYMENT)
+  /// Mini-site details captured during registration (name, contacts, location, description…)
+  shopDetails     Json
+  feeTzs          BigInt
+  paymentId       String?                 @unique
+  manualReference String?                 // mobile-money transaction code for manual payments
+  manualMsisdn    String?                 // number the manual payment was sent from
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  rejectionReason String?
+  businessId      String?                 @unique // the mini-site created on approval
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@index([status, submittedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String   // listing.approve, business.verify, ...
+  entityType String
+  entityId   String
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
