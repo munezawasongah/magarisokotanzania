@@ -6,6 +6,7 @@ import { PriceTag } from "@/components/ui/PriceTag";
 import { Badge } from "@/components/ui/Badge";
 import { VerifiedMark } from "@/components/ui/VerifiedMark";
 import { CallButton, WhatsAppButton } from "./ContactButtons";
+import { CompareToggle } from "@/components/compare/CompareToggle";
 import { enumLabel, type Dictionary, type Locale } from "@/i18n";
 import { listingWhatsappMessage } from "@/lib/whatsapp";
 import { absoluteUrl, formatKm } from "@/lib/utils";
@@ -36,6 +37,7 @@ export function VehicleCard({ listing: l, dict, locale, layout = "grid", priorit
         </div>
         {l._count.images > 1 && <span className="absolute bottom-2 right-2 rounded bg-ink-950/70 px-1.5 py-0.5 text-2xs font-medium text-white">{l._count.images} 📷</span>}
       </Link>
+      <CompareToggle id={l.id} className="absolute right-2 top-2 z-20" />
 
       <div className="flex flex-1 flex-col gap-3 p-3.5">
         <div>

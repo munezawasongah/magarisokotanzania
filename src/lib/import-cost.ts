@@ -92,3 +92,12 @@ export function monthlyLoanPayment(principal: number, annualRatePct: number, mon
   if (i === 0) return principal / months;
   return (principal * i) / (1 - Math.pow(1 + i, -months));
 }
+
+/** Typical Tanzanian bank / asset-finance vehicle loan, used for "from … / month" estimates. */
+export const LOAN_DEFAULTS = { depositPct: 30, ratePct: 17, months: 36 } as const;
+
+/** Estimated monthly repayment for a car at the default loan terms (rounded to the nearest TSh 1,000). */
+export function estimateMonthly(priceTzs: number, terms: { depositPct: number; ratePct: number; months: number } = LOAN_DEFAULTS) {
+  const principal = priceTzs * (1 - terms.depositPct / 100);
+  return Math.round(monthlyLoanPayment(principal, terms.ratePct, terms.months) / 1000) * 1000;
+}

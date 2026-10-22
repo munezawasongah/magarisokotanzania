@@ -1,7 +1,9 @@
 import "server-only";
+import { notifyUser } from "@/lib/notify";
+import { absoluteUrl } from "@/lib/utils";
+import { notifyPriceDrops, notifySavedSearches } from "./alerts";
 import { prisma } from "@/lib/prisma";
 import type { SessionUser } from "@/lib/session";
-import { sendSms } from "@/lib/sms";
 import { SITE } from "@/config/site";
 import { ListingError } from "./listings";
 import { clearListingFlags, linkedAccounts } from "./fraud/engine";
@@ -28,13 +30,18 @@ export async function moderateListing(user: SessionUser, listingId: string, deci
   });
   await prisma.auditLog.create({ data: { actorId: user.id, action: `listing.${decision.toLowerCase()}`, entityType: "Listing", entityId: listingId, meta: { reason } } });
   if (decision === "APPROVE") await clearListingFlags(user.id, listingId);
-  if (l.seller.phone) {
-    void sendSms(
-      l.seller.phone,
-      decision === "APPROVE"
-        ? `MagariSOKO Tanzania: Your listing "${l.title.slice(0, 50)}" is now live. Tangazo lako liko hewani!`
-        : `MagariSOKO Tanzania: Your listing "${l.title.slice(0, 50)}" was not approved: ${reason ?? "see dashboard"}.`,
-    );
+  void notifyUser(l.sellerId, decision === "APPROVE"
+    ? {
+        sms: `MagariSOKO Tanzania: Your listing "${l.title.slice(0, 50)}" is now live. Tangazo lako liko hewani!`,
+        email: { subject: "Your listing is live", lines: [`"${l.title}" has been approved and is now visible to buyers across Tanzania.`, `It stays live for ${SITE.listingLifetimeDays} days. We will remind you before it expires.`], action: { label: "View your listing", url: absoluteUrl(`/cars/${l.slug}`) } },
+      }
+    : {
+        sms: `MagariSOKO Tanzania: Your listing "${l.title.slice(0, 50)}" was not approved: ${reason ?? "see dashboard"}.`,
+        email: { subject: "Your listing was not approved", lines: [`"${l.title}" was not approved.`, `Reason: ${reason ?? "it does not meet our listing guidelines"}.`, "You can correct it and submit again from your dashboard."], action: { label: "Open my listings", url: absoluteUrl("/dashboard/listings") } },
+      });
+  if (decision === "APPROVE") {
+    void notifySavedSearches(listingId);
+    void notifyPriceDrops(listingId);
   }
   return updated;
 }

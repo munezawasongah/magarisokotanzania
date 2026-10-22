@@ -13,6 +13,8 @@ import { selcom } from "./selcom";
 import { dpo } from "./dpo";
 import { isBlocked, markWalletVerified } from "../fraud/engine";
 import { markRegistrationPaid, planBusinessType } from "../registration";
+import { notifyUser } from "@/lib/notify";
+import { formatTzs } from "@/lib/money";
 
 /**
  * Development gateway: used automatically when no real gateway is configured
@@ -136,8 +138,12 @@ export async function fulfillPayment(paymentId: string, opts: { gatewayRef?: str
   const result = await deliverPayment(paymentId, opts);
   if (result.delivered) {
     // A completed mobile-money payment proves control of a NIDA-registered SIM wallet.
-    const p = await prisma.payment.findUnique({ where: { id: paymentId }, select: { userId: true, msisdn: true, provider: true } });
+    const p = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: { userId: true, msisdn: true, provider: true, amountTzs: true, purpose: true, reference: true, gatewayRef: true, paidAt: true, metadata: true },
+    });
     if (p?.msisdn && p.provider !== "CARD") await markWalletVerified(p.userId, p.msisdn);
+    if (p) void sendReceipt(p);
   }
   return result;
 }
@@ -231,3 +237,29 @@ export async function getPaymentStatus(user: SessionUser, paymentId: string) {
 }
 
 export { selcom, dpo };
+
+const RECEIPT_FOR: Record<string, string> = {
+  REGISTRATION_FEE: "Seller registration fee", PROMOTION: "Listing promotion", SUBSCRIPTION: "Monthly plan",
+  INSPECTION_FEE: "Inspection fee", AD_PLACEMENT: "Advert placement", LISTING_FEE: "Listing fee",
+};
+
+/** SMS + email receipt for every successful payment (proof of payment for the customer's records). */
+async function sendReceipt(p: { userId: string; amountTzs: bigint; purpose: string; reference: string; gatewayRef: string | null; paidAt: Date | null; provider: string; metadata: unknown }) {
+  const what = RECEIPT_FOR[p.purpose] ?? p.purpose;
+  const when = (p.paidAt ?? new Date()).toLocaleString("en-GB", { timeZone: "Africa/Dar_es_Salaam", dateStyle: "medium", timeStyle: "short" });
+  const next = p.purpose === "REGISTRATION_FEE"
+    ? "Our team will now verify your payment and approve your registration. You will get an SMS when your mini-site is live."
+    : "Thank you for advertising on MagariSOKO Tanzania.";
+  await notifyUser(p.userId, {
+    sms: `MagariSOKO Tanzania: Payment received ${formatTzs(p.amountTzs)} for ${what}. Ref ${p.reference}. Asante!`,
+    email: {
+      subject: `Receipt: ${formatTzs(p.amountTzs)} — ${what}`,
+      lines: [
+        `We received your payment of ${formatTzs(p.amountTzs)} for: ${what}.`,
+        `Date: ${when} (EAT). Paid with: ${p.provider.replace(/_/g, " ")}. Our reference: ${p.reference}${p.gatewayRef ? `. Provider reference: ${p.gatewayRef}` : ""}.`,
+        next,
+      ],
+      action: { label: "Open my dashboard", url: absoluteUrl(p.purpose === "REGISTRATION_FEE" ? "/dashboard/registration" : "/dashboard") },
+    },
+  });
+}

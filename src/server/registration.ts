@@ -1,11 +1,12 @@
 import "server-only";
+import { notify } from "@/lib/notify";
+import { formatTzs } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import type { BusinessType, RegistrationAccountType, Role } from "@/generated/prisma/enums";
 import type { SessionUser } from "@/lib/session";
 import type { ShopInput } from "@/lib/validation";
 import { uniqueSlug } from "@/lib/slug";
-import { sendSms } from "@/lib/sms";
 import { absoluteUrl } from "@/lib/utils";
 import { SITE } from "@/config/site";
 import { ListingError } from "./errors";
@@ -157,13 +158,23 @@ export async function approveRegistration(admin: SessionUser, registrationId: st
   // A verified manual mobile-money payment also proves wallet ownership.
   if (reg.manualMsisdn) await markWalletVerified(reg.userId, reg.manualMsisdn);
   const to = reg.user.phone ?? shop.phone;
-  void sendSms(to, `MagariSOKO Tanzania: Registration approved! Your mini-site is live: ${absoluteUrl(`/shop/${business.slug}`)} . Ongeza matangazo yako sasa.`);
+  void notify({ phone: to, email: reg.user.email ?? shop.email }, {
+    sms: `MagariSOKO Tanzania: Registration approved! Your mini-site is live: ${absoluteUrl(`/shop/${business.slug}`)} . Ongeza matangazo yako sasa.`,
+    email: {
+      subject: "Registration approved — your mini-site is live",
+      lines: [
+        `We have verified your registration payment of ${formatTzs(reg.feeTzs)}. Your registration is complete.`,
+        `Your mini-site "${business.name}" is live with your contacts and location. You can now post your listings, each with photos and a price.`,
+      ],
+      action: { label: "Open my mini-site", url: absoluteUrl(`/shop/${business.slug}`) },
+    },
+  });
   return business;
 }
 
 export async function rejectRegistration(admin: SessionUser, registrationId: string, reason: string) {
   assertStaff(admin);
-  const reg = await prisma.sellerRegistration.findUniqueOrThrow({ where: { id: registrationId }, include: { user: { select: { phone: true } } } });
+  const reg = await prisma.sellerRegistration.findUniqueOrThrow({ where: { id: registrationId }, include: { user: { select: { phone: true, email: true } } } });
   if (reg.status === "APPROVED") throw new ListingError("Already approved", 409);
   await prisma.sellerRegistration.update({
     where: { id: reg.id },
@@ -171,7 +182,14 @@ export async function rejectRegistration(admin: SessionUser, registrationId: str
     data: { status: "REJECTED", rejectionReason: reason, reviewedAt: new Date(), reviewedById: admin.id, paymentId: null, manualReference: null },
   });
   await prisma.auditLog.create({ data: { actorId: admin.id, action: "registration.reject", entityType: "SellerRegistration", entityId: reg.id, meta: { reason } } });
-  if (reg.user.phone) void sendSms(reg.user.phone, `MagariSOKO Tanzania: Your registration payment could not be verified: ${reason}. Please check and try again from your dashboard.`);
+  void notify({ phone: reg.user.phone, email: reg.user.email }, {
+    sms: `MagariSOKO Tanzania: Your registration payment could not be verified: ${reason}. Please check and try again from your dashboard.`,
+    email: {
+      subject: "We could not verify your registration payment",
+      lines: [`Reason: ${reason}.`, "Please check the payment details and pay again, or submit the correct transaction code, from your dashboard."],
+      action: { label: "Complete my registration", url: absoluteUrl("/dashboard/registration") },
+    },
+  });
 }
 
 /** The approved mini-site owned by this user (null if not registered yet). */

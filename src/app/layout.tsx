@@ -3,6 +3,7 @@ import "@fontsource-variable/archivo/standard.css";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { CompareTray } from "@/components/compare/CompareTray";
 import { Providers } from "@/components/layout/Providers";
 import { getLocale } from "@/i18n/server";
 import { SITE } from "@/config/site";
@@ -33,6 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Header />
           <main id="main" className="flex-1">{children}</main>
           <Footer />
+          <CompareTray />
         </Providers>
       </body>
     </html>

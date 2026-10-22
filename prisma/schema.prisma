@@ -296,6 +296,11 @@ enum AdSlot {
   PARTS_TOP
 }
 
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN      // hidden by a moderator
+}
+
 enum InspectionStatus {
   REQUESTED
   SCHEDULED
@@ -423,6 +428,7 @@ model User {
   devices          UserDevice[]
   blocklistAdded   Blocklist[]
   registration     SellerRegistration?
+  reviews          Review[]
 
   @@index([status])
 }
@@ -487,6 +493,7 @@ model Business {
   subscriptions Subscription[]
   payments      Payment[]
   inspections   InspectionRequest[]
+  reviews       Review[]
 
   @@index([type, verification, isActive])
   @@index([regionId])
@@ -642,6 +649,7 @@ model Listing {
   publishedAt DateTime?
   bumpedAt    DateTime?
   expiresAt   DateTime?
+  expiryNotifiedAt DateTime? // when the "expires soon" reminder was sent (cleared on renew)
   soldAt      DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -819,6 +827,8 @@ model Favorite {
   listing   Listing?   @relation(fields: [listingId], references: [id], onDelete: Cascade)
   partId    String?
   part      SparePart? @relation(fields: [partId], references: [id], onDelete: Cascade)
+  /// price the buyer last saw (set when saved, updated after each price-drop alert)
+  alertPriceTzs BigInt?
   createdAt DateTime   @default(now())
 
   @@unique([userId, listingId])
@@ -851,9 +861,35 @@ model InspectionRequest {
   feeTzs      BigInt?
   reportUrl   String?
   notes       String?
+  preferredDate DateTime?
+  buyerMessage  String?
+  updatedAt     DateTime        @default(now()) @updatedAt
   createdAt   DateTime         @default(now())
 
+  @@index([providerId, status])
+  @@index([buyerId])
   @@index([listingId])
+}
+
+/// A buyer's review of a mini-site (dealer, yard, parts shop, garage…). Only people who
+/// contacted that seller through the platform may review, once per seller.
+model Review {
+  id           String       @id @default(cuid())
+  businessId   String
+  business     Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  rating       Int          // 1–5
+  body         String
+  status       ReviewStatus @default(PUBLISHED)
+  sellerReply  String?
+  sellerReplyAt DateTime?
+  hiddenReason String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([businessId, authorId])
+  @@index([businessId, status, createdAt])
 }
 
 model ListingReport {

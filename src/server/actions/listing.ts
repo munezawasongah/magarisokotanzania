@@ -35,7 +35,7 @@ export async function updateListingAction(id: string, patch: unknown) {
     const r = await updateListing(user, id, parsed.data);
     revalidatePath("/dashboard/listings");
     revalidatePath(`/cars/${r.slug}`);
-    return { ok: true as const };
+    return { ok: true as const, status: r.status };
   } catch (e) {
     return { ok: false as const, message: e instanceof ListingError ? e.message : "Update failed" };
   }

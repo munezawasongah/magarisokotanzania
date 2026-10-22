@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { runListingMaintenance } from "@/server/listings";
 import { scoreListing } from "@/server/fraud/engine";
+import { sendExpiryWarnings } from "@/server/alerts";
 import { json, jsonError } from "@/lib/json";
 
 /**
@@ -10,6 +11,7 @@ import { json, jsonError } from "@/lib/json";
 export async function GET(req: Request) {
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}` || !process.env.CRON_SECRET) return jsonError("Forbidden", 403);
   await runListingMaintenance(true);
+  const expiryWarnings = await sendExpiryWarnings();
   const now = new Date();
   const [subs, payments, otps] = await prisma.$transaction([
     prisma.subscription.updateMany({ where: { status: { in: ["ACTIVE", "TRIALING"] }, currentPeriodEnd: { lt: now } }, data: { status: "EXPIRED" } }),
@@ -24,5 +26,5 @@ export async function GET(req: Request) {
   });
   for (const l of recent) await scoreListing(l.id).catch(() => undefined);
   const purged = await prisma.blocklist.deleteMany({ where: { expiresAt: { lt: now } } });
-  return json({ ok: true, expiredSubscriptions: subs.count, expiredPayments: payments.count, purgedOtps: otps.count, rescored: recent.length, expiredBlocks: purged.count });
+  return json({ ok: true, expiryWarnings, expiredSubscriptions: subs.count, expiredPayments: payments.count, purgedOtps: otps.count, rescored: recent.length, expiredBlocks: purged.count });
 }

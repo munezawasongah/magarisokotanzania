@@ -1,4 +1,6 @@
+import { absoluteUrl } from "@/lib/utils";
 import "server-only";
+import { notifyUser } from "@/lib/notify";
 import { prisma } from "@/lib/prisma";
 import type { InquiryInput } from "@/lib/validation";
 import type { InquiryStatus } from "@/generated/prisma/enums";
@@ -88,11 +90,21 @@ export async function createInquiry(input: InquiryInput, ctx: { buyer?: SessionU
   if (input.listingId) await recordListingEvent(input.listingId, "INQUIRY");
 
   // Notify the seller by SMS (non-blocking)
-  const recipient = await prisma.user.findUnique({ where: { id: recipientId }, select: { phone: true } });
-  if (recipient?.phone) {
-    const offer = input.offerTzs ? ` Offer: ${formatTzs(input.offerTzs)}.` : "";
-    void sendSms(recipient.phone, `${flagged ? "CAUTION - possible scam. " : ""}MagariSOKO Tanzania: New inquiry on "${subject.slice(0, 50)}" from ${input.name} (${input.phone}).${offer} Reply from your dashboard.`);
-  }
+  const offer = input.offerTzs ? ` Offer: ${formatTzs(input.offerTzs)}.` : "";
+  void notifyUser(recipientId, {
+    sms: `${flagged ? "CAUTION - possible scam. " : ""}MagariSOKO Tanzania: New inquiry on "${subject.slice(0, 50)}" from ${input.name} (${input.phone}).${offer} Reply from your dashboard.`,
+    email: {
+      subject: `New inquiry: ${subject.slice(0, 60)}`,
+      lines: [
+        ...(flagged ? ["Caution: this message shows signs of a possible scam. Never send money or verification codes before meeting in person."] : []),
+        `${input.name} (${input.phone}${input.email ? `, ${input.email}` : ""}) sent an inquiry about "${subject}".`,
+        ...(input.offerTzs ? [`Their offer: ${formatTzs(input.offerTzs)}.`] : []),
+        `Message: "${input.message.slice(0, 600)}"`,
+      ],
+      action: { label: "Reply from your dashboard", url: absoluteUrl("/dashboard/leads") },
+      replyTo: input.email ?? undefined,
+    },
+  });
   return inquiry;
 }
 

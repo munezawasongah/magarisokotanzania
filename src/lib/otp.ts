@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomInt, timingSafeEqual } from "crypto";
 import { prisma } from "./prisma";
 import { sendSms } from "./sms";
+import { sendEmail } from "./email";
 import type { OtpPurpose } from "@/generated/prisma/enums";
 import { isBlocked } from "@/server/fraud/engine";
 
@@ -13,8 +14,12 @@ const RESEND_COOLDOWN_SEC = 45;
 const hash = (phone: string, code: string) =>
   createHash("sha256").update(`${phone}:${code}:${process.env.NEXTAUTH_SECRET}`).digest("hex");
 
-export async function issueOtp(phone: string, purpose: OtpPurpose = "LOGIN", ipHash?: string) {
-  if (await isBlocked("PHONE", phone)) return { ok: false as const, error: "This number cannot be used on MagariSOKO Tanzania. Contact support if you think this is a mistake." };
+/**
+ * Sends a 6-digit code. `phone` is the destination key: an E.164 number (SMS) or, with
+ * via = "email", a lower-cased email address (used for password resets on email-only accounts).
+ */
+export async function issueOtp(phone: string, purpose: OtpPurpose = "LOGIN", ipHash?: string, via: "sms" | "email" = "sms") {
+  if (await isBlocked(via === "email" ? "EMAIL" : "PHONE", phone)) return { ok: false as const, error: "This number cannot be used on MagariSOKO Tanzania. Contact support if you think this is a mistake." };
   const since = new Date(Date.now() - 60 * 60 * 1000);
   const recent = await prisma.otpCode.findMany({ where: { phone, purpose, createdAt: { gte: since } }, orderBy: { createdAt: "desc" } });
   if (recent.length >= MAX_PER_HOUR) return { ok: false as const, error: "Too many codes requested. Try again in an hour." };
@@ -26,9 +31,17 @@ export async function issueOtp(phone: string, purpose: OtpPurpose = "LOGIN", ipH
   await prisma.otpCode.create({
     data: { phone, purpose, codeHash: hash(phone, code), expiresAt: new Date(Date.now() + OTP_TTL_MIN * 60 * 1000), ipHash },
   });
-  const sms = await sendSms(phone, `MagariSOKO Tanzania: your code is ${code}. It expires in ${OTP_TTL_MIN} minutes. Usimpe mtu yeyote namba hii.`);
-  if (!sms.ok) return { ok: false as const, error: "Could not send SMS. Please try again." };
-  return { ok: true as const, devCode: process.env.SMS_DRIVER === "console" && process.env.NODE_ENV !== "production" ? code : undefined };
+  const what = purpose === "RESET_PASSWORD" ? "password reset code" : "code";
+  const sent = via === "email"
+    ? await sendEmail({
+        to: phone,
+        subject: purpose === "RESET_PASSWORD" ? "Your password reset code" : "Your verification code",
+        lines: [`Your MagariSOKO Tanzania ${what} is ${code}.`, `It expires in ${OTP_TTL_MIN} minutes. Never share it with anyone — our staff will never ask for it.`, "If you did not request this, you can ignore this email."],
+      })
+    : await sendSms(phone, `MagariSOKO Tanzania: your ${what} is ${code}. It expires in ${OTP_TTL_MIN} minutes. Usimpe mtu yeyote namba hii.`);
+  if (!sent.ok) return { ok: false as const, error: via === "email" ? "Could not send the email. Please try again." : "Could not send SMS. Please try again." };
+  const consoleDriver = via === "email" ? (process.env.EMAIL_DRIVER || "console") === "console" : process.env.SMS_DRIVER === "console";
+  return { ok: true as const, devCode: consoleDriver && process.env.NODE_ENV !== "production" ? code : undefined };
 }
 
 export async function verifyOtp(phone: string, code: string, purpose: OtpPurpose = "LOGIN"): Promise<boolean> {

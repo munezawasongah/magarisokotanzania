@@ -17,7 +17,9 @@ export async function POST(req: Request) {
     await prisma.favorite.delete({ where: { id: existing.id } });
     return json({ saved: false });
   }
-  await prisma.favorite.create({ data: { userId: user.id, listingId, partId } });
+  // remember the price the buyer saw, so we can tell them when it drops
+  const price = listingId ? (await prisma.listing.findUnique({ where: { id: listingId }, select: { priceTzs: true } }))?.priceTzs : undefined;
+  await prisma.favorite.create({ data: { userId: user.id, listingId, partId, alertPriceTzs: price ?? undefined } });
   if (listingId) await recordListingEvent(listingId, "FAVORITE");
   return json({ saved: true }, { status: 201 });
 }

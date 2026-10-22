@@ -7,14 +7,22 @@ import { PartAuthenticity, PartCategory, PartCondition } from "@/generated/prism
 import { ImageUploader, type UploadedImage } from "./ImageUploader";
 
 type MakeOpt = { id: number; name: string; models: Array<{ id: number; name: string }> };
-type Fit = { makeId: string; modelId: string; yearFrom: string; yearTo: string; engineCode: string };
+export type Fit = { makeId: string; modelId: string; yearFrom: string; yearTo: string; engineCode: string };
 
 /** Spare part listing with fitment rows (make / model / year range / engine code). */
-export function PartForm({ makes, regions, businessId, defaultRegionId }: { makes: MakeOpt[]; regions: Array<{ id: number; name: string }>; businessId?: string; defaultRegionId?: number | null }) {
+export type PartInitial = {
+  id: string; title: string; description: string; category: string; condition: string; authenticity: string; brand: string; partNumber: string; oemNumber: string;
+  priceTzs: string; stockQty: string; warrantyDays: string; regionId: string; images: string[]; fitments: Fit[];
+};
+
+export function PartForm({ makes, regions, businessId, defaultRegionId, initial }: { makes: MakeOpt[]; regions: Array<{ id: number; name: string }>; businessId?: string; defaultRegionId?: number | null; initial?: PartInitial }) {
   const { dict } = useI18n();
-  const [f, setF] = useState({ title: "", description: "", category: "BRAKES", condition: "NEW", authenticity: "AFTERMARKET", brand: "", partNumber: "", oemNumber: "", priceTzs: "", stockQty: "1", warrantyDays: "", regionId: defaultRegionId ? String(defaultRegionId) : "" });
-  const [fits, setFits] = useState<Fit[]>([{ makeId: "", modelId: "", yearFrom: "", yearTo: "", engineCode: "" }]);
-  const [images, setImages] = useState<UploadedImage[]>([]);
+  const editing = !!initial;
+  const [f, setF] = useState(() => initial
+    ? { title: initial.title, description: initial.description, category: initial.category, condition: initial.condition, authenticity: initial.authenticity, brand: initial.brand, partNumber: initial.partNumber, oemNumber: initial.oemNumber, priceTzs: initial.priceTzs, stockQty: initial.stockQty, warrantyDays: initial.warrantyDays, regionId: initial.regionId }
+    : { title: "", description: "", category: "BRAKES", condition: "NEW", authenticity: "AFTERMARKET", brand: "", partNumber: "", oemNumber: "", priceTzs: "", stockQty: "1", warrantyDays: "", regionId: defaultRegionId ? String(defaultRegionId) : "" });
+  const [fits, setFits] = useState<Fit[]>(initial?.fitments.length ? initial.fitments : [{ makeId: "", modelId: "", yearFrom: "", yearTo: "", engineCode: "" }]);
+  const [images, setImages] = useState<UploadedImage[]>(initial ? initial.images.map((url) => ({ url })) : []);
   const [msg, setMsg] = useState<{ ok: boolean; text: string; slug?: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const bind = (k: keyof typeof f) => ({ value: f[k], onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value }) });
@@ -28,11 +36,11 @@ export function PartForm({ makes, regions, businessId, defaultRegionId }: { make
       businessId, images: images.map((i) => i.url),
       fitments: fits.filter((x) => x.makeId).map((x) => ({ makeId: x.makeId, modelId: x.modelId || undefined, yearFrom: x.yearFrom || undefined, yearTo: x.yearTo || undefined, engineCode: x.engineCode || undefined })),
     };
-    const r = await fetch("/api/parts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch(editing ? `/api/parts/${initial!.id}` : "/api/parts", { method: editing ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await r.json();
     setBusy(false);
-    if (!r.ok) return setMsg({ ok: false, text: d.error + (d.details ? `: ${Object.keys(d.details).join(", ")}` : "") });
-    setMsg({ ok: true, text: "Part listed.", slug: d.slug });
+    if (!r.ok) return setMsg({ ok: false, text: d.error + (d.details ? `: ${Object.values(d.details).flat().join(" ")}` : "") });
+    setMsg({ ok: true, text: editing ? "Changes saved." : "Part listed.", slug: d.slug });
   }
 
   return (
@@ -49,7 +57,7 @@ export function PartForm({ makes, regions, businessId, defaultRegionId }: { make
         <div><label className="label">{dict.parts.oem}</label><input className="field uppercase" {...bind("oemNumber")} /></div>
       </div>
       <div className="grid grid-cols-3 gap-2 sm:col-span-2">
-        <div><label className="label">Price (TZS)</label><input className="field" inputMode="numeric" required placeholder="145,000" {...bind("priceTzs")} /></div>
+        <div><label className="label">Price (TZS) *</label><input className="field" inputMode="numeric" required placeholder="145,000" {...bind("priceTzs")} /></div>
         <div><label className="label">Stock</label><input className="field" inputMode="numeric" {...bind("stockQty")} /></div>
         <div><label className="label">Warranty (days)</label><input className="field" inputMode="numeric" {...bind("warrantyDays")} /></div>
       </div>
@@ -76,7 +84,7 @@ export function PartForm({ makes, regions, businessId, defaultRegionId }: { make
 
       <div className="sm:col-span-2"><ImageUploader value={images} onChange={setImages} max={10} labels={{ add: dict.sell.addPhotos, hint: "Up to 10 photos — show the part number label if possible." }} /></div>
       {msg && <p className={`text-sm sm:col-span-2 ${msg.ok ? "text-go-700" : "text-danger"}`} role="status">{msg.text} {msg.slug && <a className="underline" href={`/parts/${msg.slug}`}>{dict.common.view}</a>}</p>}
-      <button className="btn-primary sm:col-span-2" disabled={busy}>{busy ? dict.common.loading : "Publish part"}</button>
+      <button className="btn-primary sm:col-span-2" disabled={busy}>{busy ? dict.common.loading : editing ? "Save changes" : "Publish part"}</button>
     </form>
   );
 }

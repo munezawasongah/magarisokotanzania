@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BadgeCheck, Clock, Globe, Mail, MapPin, Phone } from "lucide-react";
 import { getDictionary } from "@/i18n/server";
-import { enumLabel } from "@/i18n";
+import { enumLabel, fmt } from "@/i18n";
+import { ReviewsSection } from "@/components/reviews/ReviewsSection";
+import { Stars } from "@/components/ui/Stars";
 import { getBusinessBySlug } from "@/server/businesses";
 import { searchListings } from "@/server/listings";
 import { searchParts } from "@/server/parts";
@@ -66,6 +68,7 @@ export default async function MiniSitePage({ params, searchParams }: { params: P
     address: { "@type": "PostalAddress", streetAddress: b.address ?? undefined, addressLocality: b.district?.name ?? b.region.name, addressRegion: b.region.name, addressCountry: "TZ" },
     geo: b.latitude != null && b.longitude != null ? { "@type": "GeoCoordinates", latitude: b.latitude, longitude: b.longitude } : undefined,
     makesOffer: b.services.map((s) => ({ "@type": "Offer", name: s.title, price: Number(s.priceFromTzs), priceCurrency: "TZS" })),
+    aggregateRating: b.ratingCount ? { "@type": "AggregateRating", ratingValue: b.ratingAvg, reviewCount: b.ratingCount, bestRating: 5, worstRating: 1 } : undefined,
   };
 
   return (
@@ -90,6 +93,11 @@ export default async function MiniSitePage({ params, searchParams }: { params: P
                 {b.name}{b.verification === "VERIFIED" && <BadgeCheck className="h-7 w-7 shrink-0 text-go-500" aria-label={dict.listing.verified} />}
               </h1>
               {b.tagline && <p className="mt-2 max-w-xl text-ink-100">{b.tagline}</p>}
+              {b.ratingCount > 0 && (
+                <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-sm text-ink-100 hover:text-white">
+                  <Stars value={b.ratingAvg} /> <span className="tabular-nums">{b.ratingAvg.toFixed(1)}</span> · {b.ratingCount === 1 ? dict.reviews.countOne : fmt(dict.reviews.count, { n: b.ratingCount })}
+                </a>
+              )}
               <p className="mt-3 flex items-start gap-1.5 text-sm text-ink-100"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{place}</p>
             </div>
           </div>
@@ -132,6 +140,7 @@ export default async function MiniSitePage({ params, searchParams }: { params: P
             </section>
           )}
           {nothing && <p className="panel p-6 text-sm text-ink-500">{t.noItems}</p>}
+          <ReviewsSection businessId={b.id} slug={b.slug} ratingAvg={b.ratingAvg} ratingCount={b.ratingCount} viewerId={viewer?.id} dict={dict} />
         </div>
 
         <aside className="space-y-4">
@@ -163,7 +172,7 @@ export default async function MiniSitePage({ params, searchParams }: { params: P
               <p className="whitespace-pre-line">{b.description}</p>
             </div>
           )}
-          <div className="panel p-5"><h2 className="mb-3 font-bold">{dict.inquiry.title}</h2><InquiryForm target={{ businessId: b.id }} defaultName={viewer?.name ?? undefined} defaultPhone={viewer?.phone ?? undefined} /></div>
+          <div className="panel p-5"><h2 className="mb-3 font-bold">{dict.inquiry.title}</h2><InquiryForm serviceBusiness={isService} target={{ businessId: b.id }} defaultName={viewer?.name ?? undefined} defaultPhone={viewer?.phone ?? undefined} /></div>
         </aside>
       </div>
     </div>

@@ -107,6 +107,8 @@ export const listingUpdateSchema = z.object({
   contactPhone: tzPhone.optional(),
   contactWhatsapp: tzPhone.optional(),
   status: z.enum(["ACTIVE", "SOLD", "ARCHIVED"]).optional(),
+  /** Renew for another listing period (free). Works on live and expired listings. */
+  renew: z.literal(true).optional(),
 });
 
 /* ─────────── search filters (from URL search params) ─────────── */
@@ -240,7 +242,7 @@ export const registerSchema = z
     email: z.string().trim().toLowerCase().email().optional().or(z.literal("").transform(() => undefined)),
     phone: tzPhone.optional().or(z.literal("").transform(() => undefined)),
     password: z.string().min(8, "Use at least 8 characters").max(100),
-    accountType: z.enum(["BUYER", "SELLER", "DEALER", "IMPORTER", "PARTS_VENDOR", "SERVICE_PROVIDER"]).default("BUYER"),
+    accountType: z.enum(["BUYER", "SELLER", "DEALER", "YARD", "IMPORTER", "PARTS_VENDOR", "SERVICE_PROVIDER"]).default("BUYER"),
     acceptTerms: z.literal(true, { errorMap: () => ({ message: "Please accept the Terms of Use and Privacy Policy to continue." }) }),
   })
   .refine((v) => v.email || v.phone, { message: "Provide an email or phone number", path: ["email"] });

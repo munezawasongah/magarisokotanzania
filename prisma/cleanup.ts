@@ -85,6 +85,17 @@ async function main() {
       console.log("! no admin account found — run: npx prisma db seed");
     }
   }
+
+  // Old brand name on the admin account (created before the rename to MagariSOKO Tanzania)
+  const adminUser = await prisma.user.findUnique({ where: { phone: ADMIN_PHONE } });
+  if (adminUser && /gari\s*soko/i.test(adminUser.name) && !/magarisoko/i.test(adminUser.name)) {
+    const emailFree = !(await prisma.user.findFirst({ where: { email: "admin@magarisoko.co.tz", id: { not: adminUser.id } } }));
+    await prisma.user.update({
+      where: { id: adminUser.id },
+      data: { name: "MagariSOKO Tanzania Admin", ...(adminUser.email?.endsWith("@garisoko.co.tz") && emailFree ? { email: "admin@magarisoko.co.tz" } : {}) },
+    });
+    console.log("✔ admin account renamed to MagariSOKO Tanzania Admin");
+  }
 }
 
 main()

@@ -72,8 +72,8 @@ export async function searchShops(q: string | undefined, region: string | undefi
   const [items, total] = await Promise.all([
     prisma.business.findMany({
       where,
-      select: { id: true, name: true, slug: true, type: true, tagline: true, phone: true, whatsapp: true, address: true, logoUrl: true, verification: true, region: { select: { name: true } }, _count: { select: { listings: { where: { status: "ACTIVE" } }, parts: { where: { status: "ACTIVE" } }, services: true } } },
-      orderBy: [{ verification: "asc" }, { createdAt: "desc" }],
+      select: { id: true, name: true, slug: true, type: true, tagline: true, phone: true, whatsapp: true, address: true, logoUrl: true, verification: true, ratingAvg: true, ratingCount: true, region: { select: { name: true } }, _count: { select: { listings: { where: { status: "ACTIVE" } }, parts: { where: { status: "ACTIVE" } }, services: true } } },
+      orderBy: [{ verification: "asc" }, { ratingAvg: "desc" }, { createdAt: "desc" }],
       take,
     }),
     prisma.business.count({ where }),

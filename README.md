@@ -36,6 +36,36 @@ With `SMS_DRIVER="console"`, OTP codes print in the terminal and show on the log
 
 Every car, part and service must have a price — the forms require it, the server rejects a missing price, and the database refuses a price of zero. The search box in the header and on the home page (`/search`) looks across cars, spare parts, services and shops at once, and every result shows its price and the seller's phone and WhatsApp.
 
+### Buyer and seller tools
+
+| Feature | Where | How it works |
+|---|---|---|
+| Forgot password | `/forgot-password` (link on the login page) | 6-digit code by SMS to the account's phone, or by email for email-only accounts. Same answer whether or not an account exists. The owner is told by SMS/email when the password changes. |
+| Edit a car | Dashboard → Inventory → Edit | Price, mileage, description, features, contacts. Every save is re-checked by the fraud engine; a cut of 50 %+ or a new phone number sends a live car back for review. |
+| Renew a listing | Dashboard → Inventory → Renew 60 days | Free. Sellers get an SMS + email 3 days before a listing expires, with a one-tap renew link. |
+| Spare parts management | Dashboard → My parts | Edit everything, change the stock count, "Sold out" / "Back in stock", remove. Stock 0 hides the part from search. |
+| Saved searches & alerts | "Save search & get alerts" on `/cars`; Dashboard → Search alerts | SMS + email when a newly published car matches (at most one alert per search every 2 hours). |
+| Price-drop alerts | Automatic for saved cars (♥) | SMS + email when the seller lowers the price by 2 % or TSh 200,000+. |
+| Pre-purchase inspection | Car page → Book a pre-purchase inspection; Dashboard → Inspections | Lists registered garages that offer "Pre-purchase inspection" with their price, nearest first. The garage confirms a date and uploads the report; buyer and seller are notified at each step. |
+| Compare cars | "Compare" on any car, then the tray at the bottom → `/compare` | Up to 3 cars side by side: price, year, make, model, mileage, fuel, gearbox, condition, seller type, landed cost, monthly estimate; the best value in each row is marked. |
+| Loan estimate | Car page | "From about TSh X / month" under the price (30 % deposit, 17 %, 36 months), the calculator, and registered finance/insurance providers with a WhatsApp message about that exact car. |
+| Reviews & ratings | Mini-site → Reviews; Admin → Reviews | Only buyers who contacted the seller (inquiry) or booked them (inspection) can review, once per seller. Phone numbers and links are removed from reviews. Owners can reply; admins can hide and restore. Ratings show on mini-sites, search results and the dealers page. |
+| Revenue | Admin → Revenue | Revenue per day/month, by stream and by payment method, registration funnel, latest payments, CSV download for Excel. Counts gateway-confirmed payments plus Lipa Namba fees you approved. |
+
+### Email
+
+Set `EMAIL_DRIVER` in `.env`: `console` (development — emails print in the terminal), `smtp` (any mailbox: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`) or `resend` (`RESEND_API_KEY`). Emails go out for payment receipts, registration approval/rejection, new leads, listing approval/rejection, expiry reminders, saved-search and price-drop alerts, inspection bookings and reviews — always alongside the SMS, to whoever has an email address on their account or mini-site.
+
+### Tests
+
+```powershell
+cd $HOME\projects\garisoko
+npm test                  # everything (needs PostgreSQL running)
+npm run test:unit         # business rules only, no database
+```
+
+The integration test creates its own database, `garisoko_test`, applies every migration and runs the money flow end to end: registration → TSh 30,000 payment (and duplicate callbacks) → admin approval → mini-site → listing (price and mileage enforced, zero price refused by the database) → publish → saved-search alert → price-drop alert (sent once even when triggered twice at the same moment) → expiry reminder and renew → spare parts → inspection booking → reviews → password reset → revenue report. Your real database is never touched. Run `npm test` before every deployment.
+
 ### Changing the schema
 
 Use `npm run db:migrate:dev -- --name your_change`, **not** plain `prisma migrate dev`. Prisma can't model the full-text-search columns and GIN indexes, so plain `migrate dev` would try to drop them. The wrapper strips those statements before it applies the migration.
@@ -161,8 +191,8 @@ The rates live in `src/config/import-tax.ts`, and admins can edit them at **/adm
 
 1. Hosting: Vercel, or a VPS with `npm run build && npm start`. Database: a managed PostgreSQL such as Neon, Supabase or RDS (`af-south-1` is the closest AWS region).
 2. Set every value in `.env.example`, including a long random `NEXTAUTH_SECRET` and `NEXT_PUBLIC_SITE_URL`.
-3. Run `npm run db:migrate` on deploy. Seed once with `SEED_DEMO=0 npm run db:seed`.
-4. SMS: `SMS_DRIVER=beem` (register a sender ID with Beem Africa) or `africastalking`.
+3. Run `npm test`, then `npm run db:migrate` on deploy. Seed once with `npm run db:seed`.
+4. SMS: `SMS_DRIVER=beem` (register a sender ID with Beem Africa) or `africastalking`. Email: `EMAIL_DRIVER=smtp` or `resend` (see Email above).
 5. Cloudinary: add the cloud name and API key/secret. Local disk uploads are disabled in production.
 6. Schedule `/api/cron/maintenance` hourly, with header `Authorization: Bearer $CRON_SECRET`.
 7. Register the payment callback URLs with AzamPay, Selcom and DPO, then set `PAYMENTS_MODE=production`.

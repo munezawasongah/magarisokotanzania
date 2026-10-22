@@ -13,6 +13,7 @@ import { formatTzs } from "@/lib/money";
 import { formatTzPhone } from "@/lib/phone";
 import { whatsappLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
+import { Stars } from "@/components/ui/Stars";
 
 type SP = Promise<{ q?: string; region?: string; scope?: string; page?: string }>;
 const SCOPES = ["all", "cars", "parts", "services", "shops"] as const;
@@ -122,6 +123,7 @@ export default async function SearchPage({ searchParams }: { searchParams: SP })
               <li key={b.id} className="panel flex flex-col gap-2 p-4 text-sm">
                 <Link href={`/shop/${b.slug}`} className="flex items-center gap-1.5 text-base font-bold hover:underline">{b.name}{b.verification === "VERIFIED" && <BadgeCheck className="h-4 w-4 text-go-600" aria-label={dict.listing.verified} />}</Link>
                 <p className="text-xs text-ink-500">{enumLabel(dict, "BusinessType", b.type)}{b.tagline ? ` — ${b.tagline}` : ""}</p>
+                {b.ratingCount > 0 && <p className="flex items-center gap-1.5 text-xs"><Stars value={b.ratingAvg} size="h-3.5 w-3.5" /><span className="tabular-nums">{b.ratingAvg.toFixed(1)}</span><span className="text-ink-500">({b.ratingCount})</span></p>}
                 <p className="flex items-center gap-1 text-xs text-ink-700"><MapPin className="h-3.5 w-3.5 text-ink-300" />{[b.address, b.region.name].filter(Boolean).join(", ")}</p>
                 <p className="text-xs text-ink-500">{b._count.listings} {dict.nav.cars.toLowerCase()} · {b._count.parts} {dict.nav.parts.toLowerCase()} · {b._count.services} {dict.nav.services.toLowerCase()}</p>
                 <div className="mt-auto flex gap-2 pt-1">

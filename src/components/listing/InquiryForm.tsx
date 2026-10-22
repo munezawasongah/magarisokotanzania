@@ -13,10 +13,12 @@ const TYPES_FOR = {
   business: ["SERVICE_BOOKING", "GENERAL"],
 } as const satisfies Record<string, readonly InquiryType[]>;
 
-export function InquiryForm({ target, defaultName, defaultPhone }: { target: { listingId?: string; partId?: string; businessId?: string }; defaultName?: string; defaultPhone?: string }) {
+export function InquiryForm({ target, defaultName, defaultPhone, serviceBusiness }: { target: { listingId?: string; partId?: string; businessId?: string }; defaultName?: string; defaultPhone?: string; serviceBusiness?: boolean }) {
   const { dict } = useI18n();
   const kind = target.listingId ? "listing" : target.partId ? "part" : "business";
-  const [type, setType] = useState<InquiryType>(TYPES_FOR[kind][0]);
+  const types: readonly InquiryType[] = kind === "business" && !serviceBusiness ? ["GENERAL", "SERVICE_BOOKING"] : TYPES_FOR[kind];
+  const [type, setType] = useState<InquiryType>(types[0]);
+  const defaultMessage = kind === "listing" ? dict.inquiry.defaultMessage : kind === "part" ? dict.inquiry.defaultMessagePart : serviceBusiness ? dict.inquiry.defaultMessageService : dict.inquiry.defaultMessageShop;
   const [state, action, pending] = useActionState<FormState, FormData>(submitInquiryAction, { ok: false });
   const err = (k: string) => state.fieldErrors?.[k]?.[0];
 
@@ -39,7 +41,7 @@ export function InquiryForm({ target, defaultName, defaultPhone }: { target: { l
       <div>
         <label className="label" htmlFor="inq-type">{dict.inquiry.type}</label>
         <select id="inq-type" name="type" className="field" value={type} onChange={(e) => setType(e.target.value as InquiryType)}>
-          {TYPES_FOR[kind].map((t) => <option key={t} value={t}>{enumLabel(dict, "InquiryType", t)}</option>)}
+          {types.map((t) => <option key={t} value={t}>{enumLabel(dict, "InquiryType", t)}</option>)}
         </select>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -68,7 +70,7 @@ export function InquiryForm({ target, defaultName, defaultPhone }: { target: { l
       )}
       <div>
         <label className="label" htmlFor="inq-msg">{dict.inquiry.message}</label>
-        <textarea id="inq-msg" name="message" className="field min-h-24" defaultValue={dict.inquiry.defaultMessage} required aria-invalid={!!err("message")} />
+        <textarea id="inq-msg" name="message" className="field min-h-24" defaultValue={defaultMessage} required aria-invalid={!!err("message")} />
         {err("message") && <p className="mt-1 text-xs text-danger">{err("message")}</p>}
       </div>
       {state.message && !state.ok && <p className="text-sm text-danger" role="alert">{state.message}</p>}

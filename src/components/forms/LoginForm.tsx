@@ -102,7 +102,10 @@ export function LoginForm() {
             <input id="ident" className="field" autoComplete="username" value={identifier} onChange={(e) => setIdentifier(e.target.value)} required />
           </div>
           <div>
-            <label className="label" htmlFor="pw">{dict.auth.password}</label>
+            <div className="flex items-baseline justify-between">
+              <label className="label" htmlFor="pw">{dict.auth.password}</label>
+              <a href="/forgot-password" className="text-xs font-semibold text-ink-700 underline">{dict.reset.forgot}</a>
+            </div>
             <input id="pw" type="password" className="field" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
           <button className="btn-primary w-full" disabled={busy}>{busy ? dict.common.loading : dict.nav.login}</button>

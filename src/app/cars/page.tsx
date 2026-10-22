@@ -10,6 +10,8 @@ import { SortSelect } from "@/components/search/SortSelect";
 import { KeywordBox } from "@/components/search/KeywordBox";
 import { Pagination } from "@/components/ui/Pagination";
 import { QuickFilters } from "@/components/search/QuickFilters";
+import { SaveSearchButton } from "@/components/search/SaveSearchButton";
+import { Suspense } from "react";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
@@ -52,6 +54,7 @@ export default async function CarsPage({ searchParams }: { searchParams: SP }) {
         <div>
           <h1 className="display text-3xl">{heading}{region ? ` · ${region.name}` : ""}</h1>
           <p className="mt-1 text-sm text-ink-500" aria-live="polite">{fmt(dict.search.results, { count: result.total.toLocaleString() })}</p>
+          <div className="mt-3"><Suspense><SaveSearchButton labels={{ save: dict.alerts.save, saved: dict.alerts.saved, needFilter: dict.alerts.needFilter, manage: dict.alerts.manage }} /></Suspense></div>
         </div>
         <KeywordBox placeholder={`${dict.search.keyword}: Harrier, 4x4, diesel…`} />
       </div>

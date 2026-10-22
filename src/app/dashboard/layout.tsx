@@ -22,11 +22,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
       ? [
           { href: "/dashboard/shop", label: dict.shop.title },
           ...(sellsVehicles ? [{ href: "/dashboard/listings", label: dict.dash.inventory }] : []),
-          ...(sellsParts ? [{ href: "/dashboard/parts/new", label: dict.dash.parts }] : []),
+          ...(sellsParts ? [{ href: "/dashboard/parts", label: dict.dash.parts }] : []),
         ]
       : [{ href: "/dashboard/registration", label: dict.reg.title }]),
     { href: "/dashboard/leads", label: dict.dash.leads, badge: newLeads },
     { href: "/dashboard/favorites", label: dict.nav.favorites },
+    { href: "/dashboard/alerts", label: dict.alerts.title },
+    { href: "/dashboard/inspections", label: dict.inspect.my },
   ];
   return (
     <div className="container grid gap-6 py-8 lg:grid-cols-[220px_1fr]">

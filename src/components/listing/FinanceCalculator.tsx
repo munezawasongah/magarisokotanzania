@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { useI18n } from "@/i18n/client";
 import { formatTzs, parseTzsInput } from "@/lib/money";
-import { monthlyLoanPayment } from "@/lib/import-cost";
+import { LOAN_DEFAULTS, monthlyLoanPayment } from "@/lib/import-cost";
 
 /**
  * Reducing-balance loan estimate. Defaults reflect typical Tanzanian bank
@@ -10,9 +10,9 @@ import { monthlyLoanPayment } from "@/lib/import-cost";
  */
 export function FinanceCalculator({ price }: { price: number }) {
   const { dict } = useI18n();
-  const [depositPct, setDepositPct] = useState(30);
-  const [rate, setRate] = useState(17);
-  const [months, setMonths] = useState(36);
+  const [depositPct, setDepositPct] = useState<number>(LOAN_DEFAULTS.depositPct);
+  const [rate, setRate] = useState<number>(LOAN_DEFAULTS.ratePct);
+  const [months, setMonths] = useState<number>(LOAN_DEFAULTS.months);
   const [customPrice, setCustomPrice] = useState(String(price));
 
   const p = parseTzsInput(customPrice) ?? price;

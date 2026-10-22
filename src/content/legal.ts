@@ -196,7 +196,8 @@ const privacyEn: LegalDoc = {
       body: [
         { list: [
           "To create and run your account, publish your listings and connect you with buyers or sellers (to perform our contract with you).",
-          "To send login codes, inquiry alerts, moderation results and payment confirmations by SMS or email (contract).",
+          "To send login and password-reset codes, inquiry alerts, moderation results, payment receipts, listing-expiry reminders and inspection updates by SMS or email (contract).",
+          "To send the saved-search and price-drop alerts you switch on. You can turn each alert off at any time in Dashboard → Search alerts, or remove a saved car (consent).",
           "To process payments, subscriptions and promotions (contract and legal obligations, including tax records).",
           "To verify businesses, detect fraud and scams, enforce our Terms of Use and Safety Policy, and keep the platform secure (our legitimate interests and legal obligations).",
           "To run automated fraud checks on accounts, listings and messages (for example comparing prices with the market, detecting reused photos and banned numbers). A check can hold a listing or message for review, but a person on our team makes the final decision on removing listings or banning accounts, and you can ask us to review it (our legitimate interests and the safety of other users).",
@@ -211,6 +212,7 @@ const privacyEn: LegalDoc = {
       body: [
         { list: [
           "Other users: what you put in a listing (photos, description, price, location and the contact number you choose) is public. When you send an inquiry, your name, phone number, email (if given) and message go to that seller.",
+          "Reviews you write are public with your first name and the initial of your last name, your star rating and the date. The seller you reviewed can reply publicly. Booking an inspection shares your name and phone number with the garage you choose and tells the car's seller that an inspection was booked.",
           "Service providers acting for us under contract: hosting and database providers, Cloudinary (image storage), SMS providers (such as Beem Africa and Africa's Talking) and payment providers (AzamPay, Selcom, DPO Pay).",
           "Authorities: TRA, the Police Force, courts or other public bodies where the law requires it, or where it is needed to investigate fraud or protect someone's safety.",
           `A buyer of all or part of ${C}'s business, under the same protections as this policy.`,
@@ -548,7 +550,8 @@ const privacySw: LegalDoc = {
       body: [
         { list: [
           "Kufungua na kuendesha akaunti yako, kuchapisha matangazo yako na kukuunganisha na wanunuzi au wauzaji (kutekeleza mkataba wetu nawe).",
-          "Kutuma namba za kuingia, taarifa za maswali mapya, matokeo ya ukaguzi wa matangazo na uthibitisho wa malipo kwa SMS au barua pepe (mkataba).",
+          "Kutuma namba za kuingia na za kubadilisha nenosiri, taarifa za maswali mapya, matokeo ya ukaguzi wa matangazo, risiti za malipo, vikumbusho vya matangazo kuisha muda na taarifa za ukaguzi wa magari kwa SMS au barua pepe (mkataba).",
+          "Kutuma taarifa za utafutaji uliohifadhi na za bei kushuka unazowasha. Unaweza kuzima kila taarifa wakati wowote kwenye Dashibodi → Taarifa za utafutaji, au kuondoa gari ulilohifadhi (ridhaa).",
           "Kuchakata malipo, usajili na matangazo ya kukuza (mkataba na wajibu wa kisheria, pamoja na kumbukumbu za kodi).",
           "Kuthibitisha biashara, kugundua udanganyifu na utapeli, kusimamia Masharti ya Matumizi na Sera ya Usalama, na kulinda usalama wa jukwaa (maslahi yetu halali na wajibu wa kisheria).",
           "Kufanya ukaguzi wa kiotomatiki wa udanganyifu kwenye akaunti, matangazo na ujumbe (kwa mfano kulinganisha bei na soko, kugundua picha zilizotumika tena na namba zilizopigwa marufuku). Ukaguzi unaweza kusimamisha tangazo au ujumbe ili ukaguliwe, lakini mtu wa timu yetu ndiye anayefanya uamuzi wa mwisho wa kuondoa tangazo au kufungia akaunti, na unaweza kutuomba tuupitie upya (maslahi yetu halali na usalama wa watumiaji wengine).",
@@ -563,6 +566,7 @@ const privacySw: LegalDoc = {
       body: [
         { list: [
           "Watumiaji wengine: unachoweka kwenye tangazo (picha, maelezo, bei, mahali na namba ya simu unayochagua) kinaonekana hadharani. Unapotuma swali, jina lako, namba ya simu, barua pepe (ukiitoa) na ujumbe vinatumwa kwa muuzaji husika.",
+          "Maoni unayoandika yanaonekana hadharani pamoja na jina lako la kwanza na herufi ya kwanza ya jina lako la mwisho, alama ya nyota na tarehe. Muuzaji uliyemtolea maoni anaweza kujibu hadharani. Ukiomba ukaguzi wa gari, jina lako na namba yako ya simu vinatumwa kwa gereji uliyochagua, na muuzaji wa gari anajulishwa kuwa ukaguzi umeombwa.",
           "Watoa huduma wanaotufanyia kazi chini ya mkataba: watoa huduma za seva na hifadhidata, Cloudinary (kuhifadhi picha), watoa huduma za SMS (kama Beem Africa na Africa's Talking) na watoa huduma za malipo (AzamPay, Selcom, DPO Pay).",
           "Mamlaka: TRA, Jeshi la Polisi, mahakama au taasisi nyingine za umma pale sheria inapotaka, au inapohitajika kuchunguza udanganyifu au kulinda usalama wa mtu.",
           `Mnunuzi wa biashara yote au sehemu ya biashara ya ${C}, chini ya ulinzi uleule wa sera hii.`,

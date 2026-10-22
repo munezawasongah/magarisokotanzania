@@ -46,7 +46,7 @@ export const en = {
   inquiry: {
     title: "Contact the seller", name: "Your name", phone: "Phone number", email: "Email (optional)", message: "Message",
     type: "I'd like to", offer: "Your offer (TZS)", preferredDate: "Preferred date", submit: "Send", sending: "Sending…",
-    success: "Message sent! The seller will contact you shortly.", defaultMessage: "Hello, is this vehicle still available?",
+    success: "Message sent! The seller will contact you shortly.", defaultMessage: "Hello, is this vehicle still available?", defaultMessagePart: "Hello, is this part in stock, and does it fit my car?", defaultMessageShop: "Hello, I found you on MagariSOKO Tanzania and would like more information.", defaultMessageService: "Hello, I would like to book a service. When are you available?",
   },
   parts: {
     title: "Spare parts", results: "{count} parts found", fitment: "Fits", allMakes: "All makes", oem: "OEM no.", partNo: "Part no.",
@@ -103,6 +103,40 @@ export const en = {
     logo: "Logo", cover: "Cover photo", save: "Save mini-site", saved: "Saved — your mini-site is updated.", view: "View my mini-site",
     directions: "Get directions", contact: "Contact", location: "Location", vehicles: "Vehicles for sale", partsTitle: "Spare parts", servicesTitle: "Services",
     noItems: "Nothing listed yet.", hoursLabel: "Opening hours", importsFrom: "Imports from", carLocation: "Where to see the car",
+  },
+  alerts: {
+    title: "Search alerts", save: "Save search & get alerts", saved: "Search saved — we'll SMS and email you when a matching car is posted.", manage: "Manage alerts",
+    needFilter: "Choose at least one filter (for example a make, price or region) before saving a search.",
+    intro: "Get an SMS and email the moment a car matching your search is published. Price drops on cars you saved are alerted automatically.",
+    none: "No saved searches yet. Search for cars, then tap “Save search & get alerts”.", on: "Alerts on", off: "Alerts off", run: "See matching cars", remove: "Delete",
+    lastAlert: "Last alert {date}", savedCars: "Saved cars", savedCarsHint: "You'll get a price-drop alert when the seller lowers the price of a car you saved.",
+  },
+  reviews: {
+    title: "Reviews", none: "No reviews yet.", write: "Write a review", yourRating: "Your rating", yourReview: "Your review", submit: "Publish review",
+    onlyContacted: "Only buyers who contacted this seller through MagariSOKO Tanzania can review them.", loginToReview: "Log in to write a review",
+    thanks: "Thank you — your review is published.", edit: "Update your review", sellerReply: "Reply from the seller", reply: "Reply", saveReply: "Publish reply",
+    count: "{n} reviews", countOne: "1 review", outOf: "{avg} out of 5", placeholder: "How was your experience? Was the car / part / service as described? Were they on time and honest?",
+    hidden: "Hidden by moderators", ownShop: "You cannot review your own business.",
+  },
+  inspect: {
+    title: "Book a pre-purchase inspection", intro: "An independent garage checks the car before you pay: engine, gearbox, body, accident history and documents.",
+    choose: "Choose an inspection centre", none: "No inspection centres are registered in this area yet.", date: "Preferred date", message: "Anything the inspector should know?",
+    submit: "Request inspection", sent: "Request sent. The garage will call you to confirm the time; the seller has been told to expect them.",
+    my: "Inspections", asBuyer: "Inspections I booked", asProvider: "Inspection requests", status: "Status", schedule: "Confirm date", complete: "Mark completed",
+    cancel: "Cancel", report: "Report link or summary", saveReport: "Save report", fee: "Fee from", loginToBook: "Log in to book an inspection",
+  },
+  compare: {
+    title: "Compare cars", add: "Compare", added: "Added", tray: "{n} of 3 selected", go: "Compare now", clear: "Clear", max: "You can compare up to 3 cars.",
+    empty: "Choose up to 3 cars to compare — tap “Compare” on any car.", best: "Best", monthly: "Est. monthly payment", remove: "Remove",
+  },
+  reset: {
+    title: "Reset your password", intro: "Enter the phone number or email on your account. We'll send you a 6-digit code.", identifier: "Phone number or email",
+    send: "Send code", code: "6-digit code", newPassword: "New password", confirm: "Repeat new password", save: "Set new password",
+    sent: "If an account exists for {id}, a code is on its way.", done: "Password changed. You can now log in.", mismatch: "The passwords do not match.", forgot: "Forgot password?",
+  },
+  finance: {
+    title: "Car financing", from: "From about {amount} / month", note: "Estimate only: {pct}% deposit, {months} months, {rate}% a year. Lenders confirm the final terms.",
+    providers: "Finance & insurance providers", contact: "Ask about a loan", noneYet: "Finance providers will appear here once they register.",
   },
   searchAll: {
     title: "Search", placeholder: "Search cars, spare parts and services…", all: "All", cars: "Cars", parts: "Spare parts", services: "Services", shops: "Shops & dealers",

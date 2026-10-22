@@ -10,7 +10,8 @@ import { formatTzsCompact } from "@/lib/money";
 
 const TONE: Record<string, "go" | "plate" | "muted" | "danger" | "ink"> = { ACTIVE: "go", PENDING_REVIEW: "plate", DRAFT: "plate", REJECTED: "danger", SOLD: "ink", EXPIRED: "muted" };
 
-export default async function InventoryPage() {
+export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ renew?: string }> }) {
+  const { renew } = await searchParams;
   const user = await requireUser("/dashboard/listings");
   const { dict } = await getDictionary();
   const rows = await getSellerInventory(user.id);
@@ -24,8 +25,10 @@ export default async function InventoryPage() {
         <ul className="space-y-3">
           {rows.map((l) => {
             const featured = l.isFeatured && l.featuredUntil && l.featuredUntil > now;
+            const daysLeft = l.expiresAt ? Math.ceil((l.expiresAt.getTime() - now.getTime()) / 86400_000) : null;
+            const expiresSoon = l.status === "ACTIVE" && daysLeft !== null && daysLeft <= 7;
             return (
-              <li key={l.id} className="panel flex flex-col gap-4 p-3 sm:flex-row sm:items-center">
+              <li key={l.id} id={`l-${l.id}`} className={`panel flex flex-col gap-4 p-3 sm:flex-row sm:items-center ${renew === l.id ? "ring-2 ring-plate-500" : ""}`}>
                 <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded bg-ink-100 sm:w-32">
                   <Img src={l.images[0]?.url ?? "/placeholders/sedan.svg"} alt="" fill sizes="128px" className="object-cover" transform="c_fill,w_256,h_192" />
                 </div>
@@ -38,8 +41,14 @@ export default async function InventoryPage() {
                   <Link href={`/cars/${l.slug}`} className="block truncate font-semibold hover:underline">{l.title}</Link>
                   <p className="text-xs text-ink-500">{formatTzsCompact(l.priceTzs)} · {l.region.name} · {l.viewCount} views · {l.whatsappClicks} WhatsApp · {l.callClicks} calls · {l.leadCount} leads</p>
                   {l.rejectionReason && l.status === "REJECTED" && <p className="text-xs text-danger">{l.rejectionReason}</p>}
+                  {l.status === "ACTIVE" && l.expiresAt && (
+                    <p className={`text-xs ${expiresSoon ? "font-semibold text-danger" : "text-ink-500"}`}>
+                      {expiresSoon ? `Expires in ${Math.max(0, daysLeft!)} day${daysLeft === 1 ? "" : "s"} — renew to keep it live` : `Live until ${l.expiresAt.toLocaleDateString("en-GB")}`}
+                    </p>
+                  )}
+                  {l.status === "EXPIRED" && <p className="text-xs font-semibold text-danger">Expired — buyers can no longer see it. Renew for free.</p>}
                 </div>
-                <InventoryActions id={l.id} status={l.status} />
+                <InventoryActions id={l.id} status={l.status} expiresSoon={expiresSoon} />
               </li>
             );
           })}

@@ -17,6 +17,11 @@ import { PriceTag } from "@/components/ui/PriceTag";
 import { Badge } from "@/components/ui/Badge";
 import { CallButton, WhatsAppButton } from "@/components/listing/ContactButtons";
 import { LocationMap } from "@/components/maps/LocationMap";
+import { InspectionBooking } from "@/components/inspections/InspectionBooking";
+import { financeProviders, inspectionProvidersFor } from "@/server/inspections";
+import { FinanceProviders } from "@/components/listing/FinanceProviders";
+import { CompareToggle } from "@/components/compare/CompareToggle";
+import { estimateMonthly, LOAN_DEFAULTS } from "@/lib/import-cost";
 import { InquiryForm } from "@/components/listing/InquiryForm";
 import { FinanceCalculator } from "@/components/listing/FinanceCalculator";
 import { ViewTracker } from "@/components/listing/ViewTracker";
@@ -46,11 +51,14 @@ export default async function ListingPage({ params }: { params: Params }) {
   if (!l) notFound();
   const { dict, locale } = await getDictionary();
 
-  const [similar, rate, fav] = await Promise.all([
+  const [similar, rate, fav, inspectors, lenders] = await Promise.all([
     getSimilarListings(l),
     l.isImportOnOrder || l.showUsdPrice ? getUsdTzsRate() : Promise.resolve(0),
     viewer ? prisma.favorite.findUnique({ where: { userId_listingId: { userId: viewer.id, listingId: l.id } } }) : null,
+    l.status === "ACTIVE" ? inspectionProvidersFor({ regionId: l.regionId, businessId: l.businessId }) : Promise.resolve([]),
+    financeProviders(l.regionId),
   ]);
+  const monthlyFrom = estimateMonthly(toNum(l.priceTzs));
 
   const url = absoluteUrl(`/cars/${l.slug}`);
   const waPhone = l.contactWhatsapp ?? l.contactPhone;
@@ -193,9 +201,11 @@ export default async function ListingPage({ params }: { params: Params }) {
             </section>
           )}
 
-          <section className="panel p-5">
+          <section id="finance" className="panel scroll-mt-28 p-5">
             <h2 className="mb-4 text-lg font-bold">{dict.listing.financeTitle}</h2>
             <FinanceCalculator price={toNum(l.priceTzs)} />
+            <p className="mt-2 text-xs text-ink-500">{fmt(dict.finance.note, { pct: LOAN_DEFAULTS.depositPct, months: LOAN_DEFAULTS.months, rate: LOAN_DEFAULTS.ratePct })}</p>
+            <FinanceProviders providers={lenders} car={{ title: l.title, priceTzs: toNum(l.priceTzs), url }} dict={dict} />
           </section>
         </div>
 
@@ -204,6 +214,7 @@ export default async function ListingPage({ params }: { params: Params }) {
           <div className="panel space-y-4 p-5">
             <div>
               <PriceTag value={l.priceTzs} size="lg" />
+              <a href="#finance" className="mt-1.5 block text-xs font-semibold text-ink-700 underline-offset-2 hover:underline">{fmt(dict.finance.from, { amount: formatTzs(monthlyFrom) })}</a>
               <p className="mt-2 text-xs text-ink-500">
                 {l.priceNegotiable ? dict.listing.negotiable : ""}
                 {rate > 0 && <> {l.priceNegotiable ? "· " : ""}≈ {formatUsd(toNum(l.priceTzs) / rate)}</>}
@@ -214,6 +225,7 @@ export default async function ListingPage({ params }: { params: Params }) {
                 <WhatsAppButton phone={waPhone} message={waMsg} listingId={l.id} label={dict.listing.chatWhatsapp} className="w-full py-3" />
                 <CallButton phone={l.contactPhone} listingId={l.id} label={dict.listing.call} revealLabel={dict.listing.showNumber} className="w-full" />
                 <FavoriteButton listingId={l.id} initial={!!fav} label={dict.listing.save} savedLabel={dict.listing.saved} />
+                <CompareToggle id={l.id} className="w-full justify-center py-2 text-xs" />
               </div>
             )}
             <div className="border-t border-line pt-4 text-sm">
@@ -241,11 +253,20 @@ export default async function ListingPage({ params }: { params: Params }) {
             </div>
           )}
 
+          {l.status === "ACTIVE" && !l.isOwner && (
+            <InspectionBooking
+              listingId={l.id}
+              loggedIn={!!viewer}
+              loginHref={`/login?callbackUrl=${encodeURIComponent(`/cars/${l.slug}#inspection`)}`}
+              providers={inspectors.map((p) => ({ id: p.id, name: p.name, slug: p.slug, region: p.region.name, sameRegion: p.sameRegion, priceFromTzs: Number(p.service.priceFromTzs), mobile: p.service.mobileService, ratingAvg: p.ratingAvg, ratingCount: p.ratingCount, verified: p.verification === "VERIFIED" }))}
+            />
+          )}
+
           <div className="rounded-lg border border-plate-500/60 bg-plate-300/20 p-5">
             <h2 className="mb-2 flex items-center gap-2 text-sm font-bold"><ShieldCheck className="h-4 w-4" />{dict.listing.safetyTitle}</h2>
             <ul className="list-disc space-y-1.5 pl-5 text-xs leading-5 text-ink-700">{dict.listing.safety.map((s) => <li key={s}>{s}</li>)}</ul>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold">
-              <Link href="/services?category=PRE_PURCHASE_INSPECTION" className="underline">{dict.listing.requestInspection}</Link>
+              <a href="#inspection" className="underline">{dict.listing.requestInspection}</a>
               <Link href="/safety" className="underline">{dict.legal.readSafety}</Link>
             </div>
           </div>

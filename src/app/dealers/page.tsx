@@ -3,6 +3,7 @@ import { BadgeCheck, MapPin } from "lucide-react";
 import { getDictionary } from "@/i18n/server";
 import { enumLabel } from "@/i18n";
 import { listDealers } from "@/server/businesses";
+import { Stars } from "@/components/ui/Stars";
 import { getRegionsWithDistricts } from "@/server/taxonomy";
 
 export const metadata = { title: "Car dealers & importers in Tanzania", description: "Verified car dealerships and vehicle importers in Dar es Salaam, Arusha, Mwanza, Dodoma and across Tanzania." };
@@ -26,6 +27,7 @@ export default async function DealersPage({ searchParams }: { searchParams: Prom
             <Link href={`/shop/${d.slug}`} className="panel block h-full p-5 hover:border-ink-300">
               <p className="flex items-center gap-1.5 text-lg font-bold">{d.name}{d.verification === "VERIFIED" && <BadgeCheck className="h-5 w-5 text-go-600" aria-label={dict.listing.verified} />}</p>
               <p className="text-sm text-ink-500">{enumLabel(dict, "BusinessType", d.type)}{d.tagline ? ` — ${d.tagline}` : ""}</p>
+              {d.ratingCount > 0 && <p className="mt-2 flex items-center gap-1.5 text-xs"><Stars value={d.ratingAvg} size="h-3.5 w-3.5" /><span className="tabular-nums">{d.ratingAvg.toFixed(1)}</span><span className="text-ink-500">({d.ratingCount})</span></p>}
               <p className="mt-3 flex items-center gap-1 text-sm"><MapPin className="h-4 w-4 text-ink-300" />{d.region.name}</p>
               <p className="mt-1 text-sm font-semibold">{d._count.listings} {dict.nav.cars.toLowerCase()}</p>
             </Link>

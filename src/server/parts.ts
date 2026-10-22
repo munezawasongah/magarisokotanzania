@@ -89,8 +89,7 @@ export async function getPartBySlug(slug: string) {
   });
 }
 
-export async function createPart(user: SessionUser, input: PartCreateInput) {
-  const shop = await requireShop(user, CAN_LIST_PARTS);
+async function fitmentText(input: PartCreateInput) {
   const makes = await prisma.make.findMany({ where: { id: { in: input.fitments.map((f) => f.makeId) } }, include: { models: true } });
   const makeMap = new Map(makes.map((m) => [m.id, m]));
   for (const f of input.fitments) {
@@ -104,7 +103,12 @@ export async function createPart(user: SessionUser, input: PartCreateInput) {
       return [mk.name, mk.models.find((m) => m.id === f.modelId)?.name, f.engineCode].filter(Boolean).join(" ");
     })
     .join(" ");
+  return `${input.category.toLowerCase().replace(/_/g, " ")} ${fitText}`.toLowerCase();
+}
 
+export async function createPart(user: SessionUser, input: PartCreateInput) {
+  const shop = await requireShop(user, CAN_LIST_PARTS);
+  const searchText = await fitmentText(input);
   return prisma.sparePart.create({
     data: {
       slug: uniqueSlug(input.title),
@@ -124,9 +128,65 @@ export async function createPart(user: SessionUser, input: PartCreateInput) {
       regionId: input.regionId,
       districtId: input.districtId,
       images: input.images,
-      searchText: `${input.category.toLowerCase().replace(/_/g, " ")} ${fitText}`.toLowerCase(),
+      searchText,
       fitments: { create: input.fitments },
     },
     select: { id: true, slug: true },
+  });
+}
+
+/* ─────────── seller's own parts ─────────── */
+
+export async function getMyParts(userId: string) {
+  return prisma.sparePart.findMany({
+    where: { sellerId: userId, status: { not: "ARCHIVED" } },
+    select: { id: true, slug: true, title: true, priceTzs: true, stockQty: true, status: true, images: true, viewCount: true, category: true, partNumber: true, updatedAt: true, _count: { select: { inquiries: true } } },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
+async function ownPart(user: SessionUser, id: string) {
+  const p = await prisma.sparePart.findUnique({ where: { id }, include: { fitments: true } });
+  if (!p || p.status === "ARCHIVED") throw new ListingError("Not found", 404);
+  if (p.sellerId !== user.id && !user.roles.includes("ADMIN")) throw new ListingError("Forbidden", 403);
+  return p;
+}
+
+export async function getOwnPart(user: SessionUser, id: string) {
+  return ownPart(user, id);
+}
+
+/** Full edit (same rules as creating: price required, fitments validated). */
+export async function updatePart(user: SessionUser, id: string, input: PartCreateInput) {
+  const p = await ownPart(user, id);
+  if (p.sellerId === user.id) await requireShop(user, CAN_LIST_PARTS);
+  const searchText = await fitmentText(input);
+  return prisma.$transaction(async (tx) => {
+    await tx.partFitment.deleteMany({ where: { partId: id } });
+    return tx.sparePart.update({
+      where: { id },
+      data: {
+        title: input.title, description: input.description ?? null, category: input.category, condition: input.condition, authenticity: input.authenticity,
+        brand: input.brand ?? null, partNumber: input.partNumber ?? null, oemNumber: input.oemNumber ?? null, priceTzs: BigInt(input.priceTzs),
+        stockQty: input.stockQty, warrantyDays: input.warrantyDays ?? null, regionId: input.regionId, districtId: input.districtId ?? null,
+        images: input.images, searchText, fitments: { create: input.fitments },
+        // back in stock → live again
+        status: input.stockQty > 0 && p.status === "SOLD" ? "ACTIVE" : undefined,
+      },
+      select: { id: true, slug: true, status: true },
+    });
+  });
+}
+
+/** Quick actions from the parts list: stock count, sold out / back in stock, remove. */
+export async function setPartStatus(user: SessionUser, id: string, patch: { status?: "ACTIVE" | "SOLD" | "ARCHIVED"; stockQty?: number }) {
+  const p = await ownPart(user, id);
+  const stockQty = patch.stockQty ?? (patch.status === "SOLD" ? 0 : patch.status === "ACTIVE" && p.stockQty === 0 ? 1 : undefined);
+  // a stock count of 0 means sold out; adding stock puts it back on sale
+  const status = patch.status ?? (stockQty === 0 ? "SOLD" : stockQty !== undefined && stockQty > 0 && p.status === "SOLD" ? "ACTIVE" : undefined);
+  return prisma.sparePart.update({
+    where: { id },
+    data: { status, stockQty },
+    select: { id: true, slug: true, status: true, stockQty: true },
   });
 }

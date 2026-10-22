@@ -1,4 +1,5 @@
 import "server-only";
+import { notifyPriceDrops, notifySavedSearches, sendExpiryWarnings } from "./alerts";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import type { ListingEventType, SellerType } from "@/generated/prisma/enums";
@@ -49,6 +50,7 @@ export async function runListingMaintenance(force = false) {
       prisma.listing.updateMany({ where: { isSponsored: true, sponsoredUntil: { lt: now } }, data: { isSponsored: false } }),
       prisma.listing.updateMany({ where: { status: "ACTIVE", expiresAt: { lt: now } }, data: { status: "EXPIRED" } }),
     ]);
+    void sendExpiryWarnings().catch((e) => console.error("[maintenance] expiry warnings:", e));
   } catch (e) {
     lastExpiry = 0; // retry on the next request
     console.error("[maintenance] listing expiry skipped:", e instanceof Error ? e.message : e);
@@ -375,6 +377,7 @@ export async function createListing(user: SessionUser, input: ListingCreateInput
   if (risk.level === "LOW" && (business?.verification === "VERIFIED" || (await isTrustedSeller(user.id)))) {
     await prisma.listing.update({ where: { id: created.id }, data: { status: "ACTIVE", publishedAt: now } });
     finalStatus = "ACTIVE";
+    void notifySavedSearches(created.id);
   }
   return { ...created, status: finalStatus, requiresPayment, riskLevel: risk.level };
 }
@@ -385,14 +388,19 @@ export async function createListing(user: SessionUser, input: ListingCreateInput
  * risk rises to MEDIUM or HIGH (e.g. big price cut or new phone number after
  * approval) is taken down for review.
  */
-export async function updateListing(user: SessionUser, id: string, patch: { description?: string; priceTzs?: number; priceNegotiable?: boolean; mileageKm?: number; features?: string[]; contactPhone?: string; contactWhatsapp?: string; status?: "ACTIVE" | "SOLD" | "ARCHIVED" }) {
+export async function updateListing(user: SessionUser, id: string, patch: { description?: string; priceTzs?: number; priceNegotiable?: boolean; mileageKm?: number; features?: string[]; contactPhone?: string; contactWhatsapp?: string; status?: "ACTIVE" | "SOLD" | "ARCHIVED"; renew?: boolean }) {
   const l = await prisma.listing.findUnique({ where: { id } });
   if (!l) throw new ListingError("Not found", 404);
   const staff = user.roles.includes("ADMIN") || user.roles.includes("MODERATOR");
   if (l.sellerId !== user.id && !staff) throw new ListingError("Forbidden", 403);
   if (patch.status === "ACTIVE" && !["SOLD", "ARCHIVED", "EXPIRED", "ACTIVE"].includes(l.status)) throw new ListingError("Listing must be approved first", 409);
   if (patch.status === "ACTIVE" && l.status === "ARCHIVED" && l.rejectionReason === "Removed: fraud") throw new ListingError("This listing was removed by our safety team", 403);
+  if (patch.renew) {
+    if (!["ACTIVE", "EXPIRED"].includes(l.status)) throw new ListingError("Only live or expired listings can be renewed", 409);
+    if (l.status === "EXPIRED") patch = { ...patch, status: "ACTIVE" };
+  }
   const now = new Date();
+  const renewTo = patch.renew || (patch.status === "ACTIVE" && l.status === "EXPIRED") ? new Date(now.getTime() + SITE.listingLifetimeDays * 86400_000) : undefined;
   const updated = await prisma.listing.update({
     where: { id },
     data: {
@@ -405,7 +413,8 @@ export async function updateListing(user: SessionUser, id: string, patch: { desc
       contactWhatsapp: patch.contactWhatsapp,
       status: patch.status,
       soldAt: patch.status === "SOLD" ? now : undefined,
-      expiresAt: patch.status === "ACTIVE" && l.status === "EXPIRED" ? new Date(now.getTime() + SITE.listingLifetimeDays * 86400_000) : undefined,
+      expiresAt: renewTo,
+      expiryNotifiedAt: renewTo ? null : undefined,
     },
     select: { id: true, slug: true, status: true },
   });
@@ -425,6 +434,10 @@ export async function updateListing(user: SessionUser, id: string, patch: { desc
     await prisma.listing.update({ where: { id }, data: { status: "PENDING_REVIEW" } });
     await prisma.auditLog.create({ data: { actorId: user.id, action: "listing.edit_hold", entityType: "Listing", entityId: id, meta: { score: risk.score } } });
     return { ...updated, status: "PENDING_REVIEW" as const };
+  }
+  if (updated.status === "ACTIVE") {
+    if (patch.priceTzs !== undefined && patch.priceTzs < oldPrice) void notifyPriceDrops(id);
+    if (l.status !== "ACTIVE") void notifySavedSearches(id);
   }
   return updated;
 }

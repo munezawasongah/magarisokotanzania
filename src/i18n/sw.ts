@@ -48,7 +48,7 @@ export const sw: Dictionary = {
   inquiry: {
     title: "Wasiliana na muuzaji", name: "Jina lako", phone: "Namba ya simu", email: "Barua pepe (si lazima)", message: "Ujumbe",
     type: "Ningependa", offer: "Ofa yako (TZS)", preferredDate: "Tarehe unayopendelea", submit: "Tuma", sending: "Inatuma…",
-    success: "Ujumbe umetumwa! Muuzaji atawasiliana nawe hivi karibuni.", defaultMessage: "Habari, gari hili bado linapatikana?",
+    success: "Ujumbe umetumwa! Muuzaji atawasiliana nawe hivi karibuni.", defaultMessage: "Habari, gari hili bado linapatikana?", defaultMessagePart: "Habari, kipuri hiki kinapatikana na kinafaa gari langu?", defaultMessageShop: "Habari, nimewaona kwenye MagariSOKO Tanzania na ningependa maelezo zaidi.", defaultMessageService: "Habari, ningependa kupata huduma. Mnapatikana lini?",
   },
   parts: {
     title: "Vipuri", results: "Vipuri {count} vimepatikana", fitment: "Inafaa", allMakes: "Chapa zote", oem: "Namba ya OEM", partNo: "Namba ya kipuri",
@@ -105,6 +105,40 @@ export const sw: Dictionary = {
     logo: "Nembo", cover: "Picha ya jalada", save: "Hifadhi tovuti ndogo", saved: "Imehifadhiwa — tovuti yako ndogo imesasishwa.", view: "Tazama tovuti yangu ndogo",
     directions: "Pata maelekezo", contact: "Mawasiliano", location: "Mahali", vehicles: "Magari yanayouzwa", partsTitle: "Vipuri", servicesTitle: "Huduma",
     noItems: "Bado hakuna kilichowekwa.", hoursLabel: "Saa za kazi", importsFrom: "Inaagiza kutoka", carLocation: "Mahali pa kuona gari",
+  },
+  alerts: {
+    title: "Taarifa za utafutaji", save: "Hifadhi utafutaji na upate taarifa", saved: "Utafutaji umehifadhiwa — tutakutumia SMS na barua pepe gari linalolingana likiwekwa.", manage: "Simamia taarifa",
+    needFilter: "Chagua angalau kichujio kimoja (mfano aina ya gari, bei au mkoa) kabla ya kuhifadhi utafutaji.",
+    intro: "Pata SMS na barua pepe mara gari linalolingana na utafutaji wako linapochapishwa. Bei ikishuka kwenye gari ulilohifadhi, tunakujulisha moja kwa moja.",
+    none: "Bado hujahifadhi utafutaji. Tafuta magari, kisha bonyeza “Hifadhi utafutaji na upate taarifa”.", on: "Taarifa zimewashwa", off: "Taarifa zimezimwa", run: "Ona magari yanayolingana", remove: "Futa",
+    lastAlert: "Taarifa ya mwisho {date}", savedCars: "Magari uliyohifadhi", savedCarsHint: "Utapata taarifa muuzaji akishusha bei ya gari ulilohifadhi.",
+  },
+  reviews: {
+    title: "Maoni", none: "Bado hakuna maoni.", write: "Andika maoni", yourRating: "Alama yako", yourReview: "Maoni yako", submit: "Chapisha maoni",
+    onlyContacted: "Wanunuzi waliowasiliana na muuzaji huyu kupitia MagariSOKO Tanzania pekee ndio wanaweza kutoa maoni.", loginToReview: "Ingia ili kuandika maoni",
+    thanks: "Asante — maoni yako yamechapishwa.", edit: "Badilisha maoni yako", sellerReply: "Jibu la muuzaji", reply: "Jibu", saveReply: "Chapisha jibu",
+    count: "Maoni {n}", countOne: "Maoni 1", outOf: "{avg} kati ya 5", placeholder: "Uzoefu wako ulikuwaje? Gari / kipuri / huduma ilikuwa kama ilivyoelezwa? Walikuwa waaminifu na kwa wakati?",
+    hidden: "Yamefichwa na wasimamizi", ownShop: "Huwezi kutoa maoni kuhusu biashara yako mwenyewe.",
+  },
+  inspect: {
+    title: "Weka miadi ya ukaguzi kabla ya kununua", intro: "Gereji huru inakagua gari kabla hujalipa: injini, giaboksi, bodi, historia ya ajali na nyaraka.",
+    choose: "Chagua kituo cha ukaguzi", none: "Bado hakuna vituo vya ukaguzi vilivyosajiliwa eneo hili.", date: "Tarehe unayopendelea", message: "Kuna jambo mkaguzi anapaswa kujua?",
+    submit: "Omba ukaguzi", sent: "Ombi limetumwa. Gereji itakupigia kuthibitisha muda; muuzaji amejulishwa.",
+    my: "Ukaguzi", asBuyer: "Ukaguzi niliouomba", asProvider: "Maombi ya ukaguzi", status: "Hali", schedule: "Thibitisha tarehe", complete: "Umekamilika",
+    cancel: "Ghairi", report: "Kiungo au muhtasari wa ripoti", saveReport: "Hifadhi ripoti", fee: "Ada kuanzia", loginToBook: "Ingia ili kuomba ukaguzi",
+  },
+  compare: {
+    title: "Linganisha magari", add: "Linganisha", added: "Imeongezwa", tray: "{n} kati ya 3 yamechaguliwa", go: "Linganisha sasa", clear: "Futa", max: "Unaweza kulinganisha magari 3 tu.",
+    empty: "Chagua hadi magari 3 kulinganisha — bonyeza “Linganisha” kwenye gari lolote.", best: "Bora", monthly: "Makadirio ya malipo ya mwezi", remove: "Ondoa",
+  },
+  reset: {
+    title: "Weka nenosiri jipya", intro: "Weka namba ya simu au barua pepe ya akaunti yako. Tutakutumia namba ya siri ya tarakimu 6.", identifier: "Namba ya simu au barua pepe",
+    send: "Tuma namba", code: "Namba ya tarakimu 6", newPassword: "Nenosiri jipya", confirm: "Rudia nenosiri jipya", save: "Weka nenosiri jipya",
+    sent: "Kama kuna akaunti ya {id}, namba imetumwa.", done: "Nenosiri limebadilishwa. Sasa unaweza kuingia.", mismatch: "Manenosiri hayalingani.", forgot: "Umesahau nenosiri?",
+  },
+  finance: {
+    title: "Mkopo wa gari", from: "Kuanzia takriban {amount} / mwezi", note: "Makadirio tu: amana {pct}%, miezi {months}, riba {rate}% kwa mwaka. Wakopeshaji wanathibitisha masharti.",
+    providers: "Watoa mikopo na bima", contact: "Uliza kuhusu mkopo", noneYet: "Watoa mikopo wataonekana hapa wakishajisajili.",
   },
   searchAll: {
     title: "Tafuta", placeholder: "Tafuta magari, vipuri na huduma…", all: "Vyote", cars: "Magari", parts: "Vipuri", services: "Huduma", shops: "Maduka na wauzaji",
