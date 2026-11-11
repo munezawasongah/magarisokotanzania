@@ -9,15 +9,19 @@ import type { ShopInput } from "@/lib/validation";
 import { uniqueSlug } from "@/lib/slug";
 import { absoluteUrl } from "@/lib/utils";
 import { SITE } from "@/config/site";
+import { getMonetisation } from "@/lib/settings";
 import { ListingError } from "./errors";
 import { isBlocked, markWalletVerified } from "./fraud/engine";
 
 /**
  * Seller registration lifecycle
- *   1. details saved            → AWAITING_PAYMENT
- *   2. fee paid online, or a manual mobile-money code submitted → PAYMENT_SUBMITTED
- *   3. admin verifies payment   → APPROVED: role granted + mini-site (Business) created
- *      or rejects               → REJECTED (user can pay / resubmit again)
+ *   Free sign-up (private sellers always; businesses while the sign-up fee is 0):
+ *     details saved → APPROVED at once: role granted + mini-site (Business) created
+ *   Paid sign-up (businesses when Admin → Pricing & fees sets a sign-up fee):
+ *     1. details saved            → AWAITING_PAYMENT
+ *     2. fee paid online, or a manual mobile-money code submitted → PAYMENT_SUBMITTED
+ *     3. admin verifies payment   → APPROVED, or REJECTED (user can pay / resubmit again)
+ *   Listings are still screened by the fraud engine and moderation either way.
  */
 
 export const ROLE_FOR: Record<RegistrationAccountType, Role> = {
@@ -46,6 +50,12 @@ export function planBusinessType(t: BusinessType): BusinessType {
   return t;
 }
 
+/** Sign-up fee for this account type right now (private sellers never pay one). */
+export async function registrationFeeFor(type: RegistrationAccountType): Promise<number> {
+  if (type === "SELLER") return 0;
+  return (await getMonetisation()).registrationFee;
+}
+
 export async function getMyRegistration(userId: string) {
   return prisma.sellerRegistration.findUnique({ where: { userId } });
 }
@@ -63,16 +73,39 @@ async function assertLocation(shop: ShopInput) {
   }
 }
 
-/** Step 1: save (or update) the details. Allowed until the registration is approved. */
+/**
+ * Step 1: save (or update) the details. Allowed until the registration is approved.
+ * A free sign-up is approved in the same step and the mini-site goes live immediately.
+ */
 export async function saveRegistrationDetails(user: SessionUser, accountType: RegistrationAccountType, shop: ShopInput) {
   await assertContactsAllowed(shop);
   await assertLocation(shop);
   const existing = await getMyRegistration(user.id);
   if (existing?.status === "APPROVED") throw new ListingError("You are already registered. Edit your mini-site instead.", 409);
-  const data = { accountType, shopDetails: shop as unknown as Prisma.InputJsonValue };
-  return existing
-    ? prisma.sellerRegistration.update({ where: { userId: user.id }, data })
-    : prisma.sellerRegistration.create({ data: { ...data, userId: user.id, feeTzs: BigInt(SITE.registrationFeeTzs) } });
+  const fee = await registrationFeeFor(accountType);
+  // a payment already submitted keeps the fee it was made for
+  const keepFee = existing?.status === "PAYMENT_SUBMITTED";
+  const data = { accountType, shopDetails: shop as unknown as Prisma.InputJsonValue, ...(keepFee ? {} : { feeTzs: BigInt(fee) }) };
+  const reg = existing
+    ? await prisma.sellerRegistration.update({ where: { userId: user.id }, data })
+    : await prisma.sellerRegistration.create({ data: { ...data, userId: user.id, feeTzs: BigInt(fee) } });
+  if (reg.feeTzs > BigInt(0) || reg.status === "PAYMENT_SUBMITTED") return reg;
+  const business = await createMiniSite(reg.id, null);
+  return { ...reg, status: "APPROVED" as const, businessId: business.id, businessSlug: business.slug };
+}
+
+/**
+ * Finishes a registration saved while a sign-up fee applied, once the fee for its
+ * account type is zero (e.g. the admin made sign-up free): approves it without payment.
+ */
+export async function completeFreeRegistration(user: SessionUser) {
+  const reg = await getMyRegistration(user.id);
+  if (!reg) throw new ListingError("Fill in your details first", 400);
+  if (reg.status === "APPROVED") throw new ListingError("Your registration is already approved", 409);
+  if (reg.status === "PAYMENT_SUBMITTED") throw new ListingError("Your payment is already waiting for verification", 409);
+  if ((await registrationFeeFor(reg.accountType)) > 0) throw new ListingError("This account type has a sign-up fee", 402);
+  await prisma.sellerRegistration.update({ where: { id: reg.id }, data: { feeTzs: BigInt(0) } });
+  return createMiniSite(reg.id, null);
 }
 
 /** Step 2b: the user paid to the Lipa Namba and submits the transaction code. */
@@ -106,17 +139,32 @@ function assertStaff(user: SessionUser) {
 /** Step 3: admin verified the payment → create the mini-site and grant the seller role. */
 export async function approveRegistration(admin: SessionUser, registrationId: string) {
   assertStaff(admin);
-  const reg = await prisma.sellerRegistration.findUniqueOrThrow({ where: { id: registrationId }, include: { user: true } });
-  if (reg.status !== "PAYMENT_SUBMITTED") throw new ListingError("Only registrations with a submitted payment can be approved", 409);
-  const payment = reg.paymentId ? await prisma.payment.findUnique({ where: { id: reg.paymentId } }) : null;
-  if (reg.paymentId && payment?.status !== "SUCCESS") throw new ListingError("The online payment has not been confirmed by the payment provider yet", 409);
-  if (!reg.paymentId && !reg.manualReference) throw new ListingError("No payment evidence on this registration", 409);
+  const reg = await prisma.sellerRegistration.findUniqueOrThrow({ where: { id: registrationId } });
+  const free = reg.feeTzs === BigInt(0);
+  if (!free && reg.status !== "PAYMENT_SUBMITTED") throw new ListingError("Only registrations with a submitted payment can be approved", 409);
+  if (reg.status === "APPROVED") throw new ListingError("Already approved", 409);
+  if (!free) {
+    const payment = reg.paymentId ? await prisma.payment.findUnique({ where: { id: reg.paymentId } }) : null;
+    if (reg.paymentId && payment?.status !== "SUCCESS") throw new ListingError("The online payment has not been confirmed by the payment provider yet", 409);
+    if (!reg.paymentId && !reg.manualReference) throw new ListingError("No payment evidence on this registration", 409);
+  }
+  return createMiniSite(reg.id, admin.id);
+}
 
+/**
+ * Creates the mini-site, grants the seller role and marks the registration approved.
+ * `reviewerId` is null for a free sign-up approved automatically.
+ */
+async function createMiniSite(registrationId: string, reviewerId: string | null) {
+  const reg = await prisma.sellerRegistration.findUniqueOrThrow({ where: { id: registrationId }, include: { user: true } });
   const shop = reg.shopDetails as unknown as ShopInput;
   const type = businessTypeFor(reg.accountType, shop);
   const role = ROLE_FOR[reg.accountType];
 
   const business = await prisma.$transaction(async (tx) => {
+    // guard against a double submit approving twice
+    const claimed = await tx.sellerRegistration.updateMany({ where: { id: reg.id, status: { not: "APPROVED" } }, data: { status: "APPROVED" } });
+    if (claimed.count === 0) throw new ListingError("Already approved", 409);
     const b = await tx.business.create({
       data: {
         type,
@@ -149,21 +197,22 @@ export async function approveRegistration(admin: SessionUser, registrationId: st
     await tx.user.update({ where: { id: reg.userId }, data: { roles } });
     await tx.sellerRegistration.update({
       where: { id: reg.id },
-      data: { status: "APPROVED", reviewedAt: new Date(), reviewedById: admin.id, businessId: b.id, rejectionReason: null },
+      data: { reviewedAt: new Date(), reviewedById: reviewerId, businessId: b.id, rejectionReason: null, submittedAt: reg.submittedAt ?? new Date() },
     });
-    await tx.auditLog.create({ data: { actorId: admin.id, action: "registration.approve", entityType: "SellerRegistration", entityId: reg.id, meta: { businessId: b.id } } });
+    await tx.auditLog.create({ data: { actorId: reviewerId ?? reg.userId, action: reviewerId ? "registration.approve" : "registration.auto_approve_free", entityType: "SellerRegistration", entityId: reg.id, meta: { businessId: b.id } } });
     return b;
   });
 
   // A verified manual mobile-money payment also proves wallet ownership.
   if (reg.manualMsisdn) await markWalletVerified(reg.userId, reg.manualMsisdn);
   const to = reg.user.phone ?? shop.phone;
+  const paid = reg.feeTzs > BigInt(0);
   void notify({ phone: to, email: reg.user.email ?? shop.email }, {
-    sms: `MagariSOKO Tanzania: Registration approved! Your mini-site is live: ${absoluteUrl(`/shop/${business.slug}`)} . Ongeza matangazo yako sasa.`,
+    sms: `${SITE.name}: ${paid ? "Registration approved! " : ""}Your mini-site is live: ${absoluteUrl(`/shop/${business.slug}`)} . Add your listings now.`,
     email: {
-      subject: "Registration approved — your mini-site is live",
+      subject: paid ? "Registration approved — your mini-site is live" : "Welcome — your mini-site is live",
       lines: [
-        `We have verified your registration payment of ${formatTzs(reg.feeTzs)}. Your registration is complete.`,
+        paid ? `We have verified your registration payment of ${formatTzs(reg.feeTzs)}. Your registration is complete.` : `Welcome to ${SITE.name}. Your registration is complete.`,
         `Your mini-site "${business.name}" is live with your contacts and location. You can now post your listings, each with photos and a price.`,
       ],
       action: { label: "Open my mini-site", url: absoluteUrl(`/shop/${business.slug}`) },
@@ -183,7 +232,7 @@ export async function rejectRegistration(admin: SessionUser, registrationId: str
   });
   await prisma.auditLog.create({ data: { actorId: admin.id, action: "registration.reject", entityType: "SellerRegistration", entityId: reg.id, meta: { reason } } });
   void notify({ phone: reg.user.phone, email: reg.user.email }, {
-    sms: `MagariSOKO Tanzania: Your registration payment could not be verified: ${reason}. Please check and try again from your dashboard.`,
+    sms: `${SITE.name}: Your registration payment could not be verified: ${reason}. Please check and try again from your dashboard.`,
     email: {
       subject: "We could not verify your registration payment",
       lines: [`Reason: ${reason}.`, "Please check the payment details and pay again, or submit the correct transaction code, from your dashboard."],
@@ -204,7 +253,7 @@ export async function requireShop(user: SessionUser, allowed?: BusinessType[]) {
   const shop = await getMyShop(user.id);
   if (!shop) {
     if (user.roles.includes("ADMIN")) return null;
-    throw new ListingError("Complete your seller registration (TSh 30,000) before posting listings.", 403);
+    throw new ListingError("Complete your seller registration before posting listings.", 403);
   }
   if (!shop.isActive) throw new ListingError("Your mini-site is suspended. Contact support.", 403);
   if (allowed && !allowed.includes(shop.type)) throw new ListingError("Your account type cannot post this kind of listing.", 403);

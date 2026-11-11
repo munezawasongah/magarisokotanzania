@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return jsonError("Please fix the highlighted fields", 422, fieldErrorsFrom(parsed.error, "shop"));
   try {
     const reg = await saveRegistrationDetails(user, parsed.data.accountType, parsed.data.shop);
-    return json({ id: reg.id, status: reg.status });
+    return json({ id: reg.id, status: reg.status, accountType: reg.accountType });
   } catch (e) {
     if (e instanceof ListingError) return jsonError(e.message, e.status);
     throw e;

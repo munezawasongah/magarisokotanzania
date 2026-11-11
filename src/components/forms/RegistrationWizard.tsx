@@ -15,7 +15,10 @@ const ICONS: Record<ShopKind, typeof Car> = { SELLER: Car, DEALER: Store, YARD: 
 
 export type WizardProps = {
   regions: RegionOpt[];
-  feeTzs: number;
+  /** Current one-off sign-up fee for businesses (private sellers never pay one) */
+  businessFee: number;
+  /** Fee stored on a registration already waiting for payment (null if none) */
+  savedFeeTzs: number | null;
   defaultPhone: string;
   initialType: ShopKind | null;
   initialShop: ShopValues;
@@ -24,7 +27,10 @@ export type WizardProps = {
   manual: { lipaNamba: string; accountName: string; network: string };
 };
 
-/** Seller registration: account type → mini-site details → TSh 30,000 payment → admin verification. */
+/**
+ * Seller registration: account type → mini-site details → (payment → admin verification, only when a
+ * sign-up fee applies). Free sign-ups — always for private sellers — go live as soon as the details are saved.
+ */
 export function RegistrationWizard(p: WizardProps) {
   const { dict } = useI18n();
   const t = dict.reg;
@@ -35,12 +41,31 @@ export function RegistrationWizard(p: WizardProps) {
   const [shop, setShop] = useState<ShopValues>(p.initialShop);
   const [manual, setManual] = useState({ reference: "", msisdn: p.defaultPhone });
   const [manualState, setManualState] = useState<{ busy: boolean; error?: string }>({ busy: false });
-  const fee = formatTzs(p.feeTzs);
+  const feeFor = (k: ShopKind | null) => (k === "SELLER" ? 0 : p.businessFee);
+  const feeTzs = p.savedFeeTzs !== null && p.savedFeeTzs > 0 && feeFor(type) > 0 ? p.savedFeeTzs : feeFor(type);
+  const fee = formatTzs(feeTzs);
+  const free = feeTzs === 0;
+  const [finishing, setFinishing] = useState<{ busy: boolean; error?: string }>({ busy: false });
+
+  /** After a free sign-up: private sellers go straight to posting a car, businesses see their status page. */
+  function afterApproved(kind: ShopKind | null) {
+    if (kind === "SELLER" || kind === "DEALER" || kind === "YARD" || kind === "IMPORTER") window.location.href = "/sell";
+    else router.refresh();
+  }
+
+  async function finishFree() {
+    setFinishing({ busy: true });
+    const r = await fetch("/api/registration/complete", { method: "POST" });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return setFinishing({ busy: false, error: data.error ?? dict.common.error });
+    afterApproved(type);
+  }
 
   async function saveDetails(payload: Record<string, unknown>): Promise<SubmitResult> {
     const r = await fetch("/api/registration", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountType: type, shop: payload }) });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return { ok: false, error: data.error ?? dict.common.error, fieldErrors: data.details };
+    if (data.status === "APPROVED") { afterApproved(type); return { ok: true }; }
     setShop((s) => ({ ...s, ...(payload as Partial<ShopValues>), latitude: (payload.latitude as number | null) || null, longitude: (payload.longitude as number | null) || null }));
     setStep(2);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -56,11 +81,11 @@ export function RegistrationWizard(p: WizardProps) {
     router.refresh();
   }
 
-  const steps = [t.stepType, t.stepDetails, t.stepPayment, t.stepReview];
+  const steps = free ? [t.stepType, t.stepDetails] : [t.stepType, t.stepDetails, t.stepPayment, t.stepReview];
 
   return (
     <div className="space-y-6">
-      <ol className="grid grid-cols-4 gap-2" aria-label="Steps">
+      <ol className={cn("grid gap-2", free ? "grid-cols-2" : "grid-cols-4")} aria-label="Steps">
         {steps.map((s, i) => (
           <li key={s} className={cn("border-t-4 pt-2 text-xs font-semibold sm:text-sm", i <= step ? "border-ink-900 text-ink-900" : "border-line text-ink-300")} aria-current={i === step ? "step" : undefined}>
             <span className="tabular-nums">{i + 1}.</span> {s}
@@ -85,7 +110,7 @@ export function RegistrationWizard(p: WizardProps) {
               );
             })}
           </ul>
-          <p className="text-sm text-ink-700">{dict.reg.feeTitle}: <span className="plate text-sm">{fee}</span></p>
+          {type && <p className="text-sm text-ink-700">{dict.reg.feeTitle}: <span className="plate text-sm">{free ? t.free : fee}</span></p>}
           <button type="button" className="btn-primary" disabled={!type} onClick={() => setStep(1)}>{t.continue}</button>
         </div>
       )}
@@ -93,11 +118,23 @@ export function RegistrationWizard(p: WizardProps) {
       {step === 1 && type && (
         <div className="space-y-4">
           <button type="button" className="text-sm font-semibold text-ink-700 underline" onClick={() => setStep(0)}>← {t.back} · {t.types[type][0]}</button>
-          <ShopForm kind={type} regions={p.regions} initial={shop} onSubmit={saveDetails} submitLabel={t.saveDetails} />
+          <ShopForm kind={type} regions={p.regions} initial={shop} onSubmit={saveDetails} submitLabel={free ? t.saveDetailsFree : t.saveDetails} />
         </div>
       )}
 
-      {step === 2 && (
+      {step === 2 && free && (
+        <div className="panel space-y-3 p-5">
+          <p className="font-semibold">{shop.name}{type ? ` · ${t.types[type][0]}` : ""}</p>
+          <p className="text-sm text-ink-700">{t.businessFeeFree}</p>
+          {finishing.error && <p className="text-sm text-danger" role="alert">{finishing.error}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-plate" disabled={finishing.busy} onClick={finishFree}>{finishing.busy ? dict.common.loading : t.saveDetailsFree}</button>
+            <button type="button" className="btn-ghost" onClick={() => setStep(type ? 1 : 0)}>{t.editDetails}</button>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && !free && (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
             {p.status === "REJECTED" && p.rejectionReason && (
@@ -112,7 +149,7 @@ export function RegistrationWizard(p: WizardProps) {
                 purpose="REGISTRATION_FEE"
                 defaultPhone={p.defaultPhone}
                 successHref="/dashboard/registration"
-                items={[{ code: "REGISTRATION_FEE", name: t.feeTitle, priceTzs: p.feeTzs }]}
+                items={[{ code: "REGISTRATION_FEE", name: t.feeTitle, priceTzs: feeTzs }]}
               />
             </section>
             {p.manual.lipaNamba && (

@@ -20,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           { href: "/admin", label: "Overview" },
           { href: "/admin/registrations", label: "Registrations", badge: regs },
           { href: "/admin/revenue", label: "Revenue" },
+          { href: "/admin/pricing", label: "Pricing & fees" },
           { href: "/admin/listings", label: "Moderation", badge: pending },
           { href: "/admin/fraud", label: "Fraud", badge: flagged },
           { href: "/admin/blocklist", label: "Blocklist" },

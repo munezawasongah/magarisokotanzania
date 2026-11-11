@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatTzPhone } from "@/lib/phone";
 import { formatTzs } from "@/lib/money";
 import { SITE } from "@/config/site";
+import { getMonetisation } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Seller registrations" };
@@ -23,16 +24,17 @@ const TYPE_LABEL: Record<string, string> = { SELLER: "Private seller", DEALER: "
 export default async function RegistrationsPage({ searchParams }: { searchParams: Promise<{ status?: string; error?: string }> }) {
   const sp = await searchParams;
   const status: Tab = (TABS.find(([k]) => k === sp.status)?.[0] ?? "PAYMENT_SUBMITTED") as Tab;
-  const list = await getRegistrationQueue(status);
+  const [list, money] = await Promise.all([getRegistrationQueue(status), getMonetisation()]);
 
   return (
     <div className="space-y-5">
       <header>
         <h1 className="display text-2xl">Seller registrations</h1>
         <p className="mt-1 max-w-3xl text-sm text-ink-500">
-          Every seller, dealer, importer, spare-parts shop and service provider pays {formatTzs(SITE.registrationFeeTzs)}. Confirm the money is in the account
-          (online payments are confirmed by the gateway; for Lipa Namba payments, match the transaction code and amount on your M-Pesa / Mixx / Airtel statement), then approve.
-          Approval creates the seller&apos;s mini-site and sends them an SMS.
+          Private sellers sign up free and their mini-site goes live at once.{" "}
+          {money.registrationFee > 0
+            ? <>Businesses pay a one-off {formatTzs(money.registrationFee)}: confirm the money is in the account (online payments are confirmed by the gateway; for {SITE.manualPayment.label} payments, match the transaction code and amount on your mobile-money statement), then approve. Approval creates the mini-site and sends an SMS.</>
+            : <>Business sign-up is free too (change it at Pricing &amp; fees), so new registrations are approved automatically. Older ones still waiting here can be approved without payment.</>}
         </p>
       </header>
       {sp.error && <p className="rounded-md border border-danger/40 bg-danger/5 p-3 text-sm text-danger" role="alert">{sp.error}</p>}

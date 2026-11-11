@@ -599,6 +599,9 @@ model Listing {
   chassisNumber String?         // never displayed publicly
   features     String[]         // ["Sunroof","Reverse camera","Leather seats",...]
 
+  // listing fee: private sellers' first listings are free; later ones are paid per listing period
+  isFreeListing   Boolean  @default(true)
+
   // pricing
   priceTzs        BigInt
   priceNegotiable Boolean  @default(true)
@@ -669,6 +672,7 @@ model Listing {
   @@index([status, regionId])
   @@index([status, bodyType])
   @@index([sellerId])
+  @@index([sellerId, isFreeListing])
   @@index([businessId])
   @@index([riskLevel, status])
   @@index([contactPhone])

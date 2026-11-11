@@ -1,15 +1,20 @@
 import Link from "next/link";
+import { CarFront } from "lucide-react";
 import { getDictionary } from "@/i18n/server";
 import { enumLabel, fmt } from "@/i18n";
 import { HeroSearch } from "@/components/search/HeroSearch";
 import { VehicleCard } from "@/components/listing/VehicleCard";
+import { CompactCard } from "@/components/listing/CompactCard";
 import { Img } from "@/components/ui/Img";
 import { getMakesWithModels, getRegionsWithDistricts } from "@/server/taxonomy";
 import { getFeaturedListings, getLatestListings } from "@/server/listings";
 import { prisma } from "@/lib/prisma";
 import { getBodyTypeTiles } from "@/server/body-types";
-import { SITE } from "@/config/site";
+import { PRICE_BANDS, SITE } from "@/config/site";
 import { formatTzs } from "@/lib/money";
+import { getMonetisation, listingFeesOn } from "@/lib/settings";
+import { priceBandLinks } from "@/lib/price-bands";
+import { getBrowseCounts } from "@/server/browse-counts";
 
 export const revalidate = 120;
 
@@ -18,11 +23,11 @@ const BODY_TILES = ["SUV", "SEDAN", "HATCHBACK", "PICKUP", "MINIVAN", "TRUCK", "
 export default async function HomePage() {
   const { dict, locale } = await getDictionary();
   const now = new Date();
-  const [makes, regions, featured, latest, counts, ad, regionCounts, bodyTiles] = await Promise.all([
+  const [makes, regions, featured, latest, counts, ad, regionCounts, bodyTiles, money, browse] = await Promise.all([
     getMakesWithModels(),
     getRegionsWithDistricts(),
     getFeaturedListings(8),
-    getLatestListings(8),
+    getLatestListings(12),
     Promise.all([
       prisma.listing.count({ where: { status: "ACTIVE" } }),
       prisma.sparePart.count({ where: { status: "ACTIVE" } }),
@@ -31,7 +36,13 @@ export default async function HomePage() {
     prisma.adPlacement.findFirst({ where: { slot: "HOME_INLINE", isActive: true, startsAt: { lte: now }, endsAt: { gte: now } }, orderBy: { startsAt: "desc" } }),
     prisma.listing.groupBy({ by: ["regionId"], where: { status: "ACTIVE" }, _count: { _all: true }, orderBy: { _count: { regionId: "desc" } }, take: 8 }),
     getBodyTypeTiles([...BODY_TILES]),
+    getMonetisation(),
+    getBrowseCounts([...PRICE_BANDS]),
   ]);
+  const bands = priceBandLinks(dict).map((b, i) => ({ ...b, count: browse.bands[i] }));
+  const paid = listingFeesOn(money);
+  const listCta = paid ? fmt(dict.hero.listFirstFree, { n: money.freePrivateListings }) : dict.hero.listFree;
+  const listNote = paid ? fmt(dict.hero.listFirstFreeNote, { fee: formatTzs(money.privateListingFee), days: SITE.listingLifetimeDays }) : dict.hero.listFreeNote;
   const [carCount, partCount, verifiedCount] = counts;
   const regionMap = new Map(regions.map((r) => [r.id, r]));
 
@@ -41,10 +52,19 @@ export default async function HomePage() {
       <section className="relative overflow-hidden bg-ink-950 pb-14 pt-12 text-white md:pb-20 md:pt-16">
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[repeating-linear-gradient(90deg,transparent_0_56px,rgba(255,212,59,.18)_56px_104px)] [mask-image:linear-gradient(to_top,black,transparent)]" />
         <div className="container relative">
-          <h1 className="display max-w-3xl text-4xl leading-[1.05] text-white md:text-6xl">{dict.hero.title}</h1>
-          <p className="mt-4 max-w-xl text-base text-ink-100 md:text-lg">{dict.hero.subtitle}</p>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="display max-w-3xl text-4xl leading-[1.05] text-white md:text-6xl">{dict.hero.title}</h1>
+              <p className="mt-4 max-w-xl text-base text-ink-100 md:text-lg">{dict.hero.subtitle}</p>
+            </div>
+            {/* Sellers' door, as visible as the buyers' search: cars on the site are what bring buyers */}
+            <div className="max-w-xs shrink-0 rounded-lg border border-white/15 bg-white/5 p-4">
+              <Link href="/sell?as=private" className="btn-plate w-full"><CarFront className="h-4 w-4" aria-hidden />{listCta}</Link>
+              <p className="mt-2 text-xs text-ink-100">{listNote}</p>
+            </div>
+          </div>
           <div className="mt-8 max-w-5xl">
-            <HeroSearch makes={makes} regions={regions.map((r) => ({ slug: r.slug, name: r.name }))} />
+            <HeroSearch makes={makes} regions={regions.map((r) => ({ slug: r.slug, name: r.name }))} bands={bands} />
           </div>
           <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-2 text-sm text-ink-100">
             <div><dt className="sr-only">Cars</dt><dd><strong className="text-white tabular-nums">{carCount.toLocaleString()}</strong> {dict.nav.cars.toLowerCase()}</dd></div>
@@ -52,6 +72,24 @@ export default async function HomePage() {
             <div><dt className="sr-only">Verified</dt><dd><strong className="text-white tabular-nums">{verifiedCount}</strong> {locale === "sw" ? "biashara zilizothibitishwa" : "verified businesses"}</dd></div>
           </dl>
         </div>
+      </section>
+
+      {/* Just listed: a compact grid high up, so buyers see real cars before anything else */}
+      <section className="container mt-10">
+        <div className="flex items-end justify-between gap-3">
+          <h2 className="text-xl font-bold">{dict.hero.justListed}</h2>
+          {carCount > 0 && <Link href="/cars?sort=newest" className="text-sm font-semibold text-ink-700 underline-offset-2 hover:underline">{fmt(dict.hero.seeAll, { count: carCount.toLocaleString() })}</Link>}
+        </div>
+        {latest.length > 0 ? (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {latest.map((l, i) => <CompactCard key={l.id} listing={l} priority={i < 2} />)}
+          </div>
+        ) : (
+          <div className="panel mt-4 flex flex-col gap-3 p-6 text-sm text-ink-700 sm:flex-row sm:items-center sm:justify-between">
+            <p>{locale === "sw" ? "Bado hakuna magari yaliyochapishwa. Kuwa wa kwanza — kuweka tangazo ni bure." : "No cars are listed yet. Be the first — listing is free."}</p>
+            <Link href="/sell?as=private" className="btn-plate shrink-0">{listCta}</Link>
+          </div>
+        )}
       </section>
 
       {/* Body types */}
@@ -91,19 +129,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section className="container mt-14">
-        <h2 className="text-xl font-bold">{locale === "sw" ? "Mapya sokoni" : "Just listed"}</h2>
-        {latest.length > 0 ? (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {latest.map((l) => <VehicleCard key={l.id} listing={l} dict={dict} locale={locale} />)}
-          </div>
-        ) : (
-          <div className="panel mt-4 p-6 text-sm text-ink-700">
-            <p>{locale === "sw" ? "Bado hakuna magari yaliyochapishwa. Wauzaji waliosajiliwa wataanza kuweka matangazo hivi karibuni." : "No vehicles have been published yet. Registered sellers will start posting soon."}</p>
-            <Link href="/dashboard/registration" className="btn-primary mt-4">{dict.reg.registerNow}</Link>
-          </div>
-        )}
-      </section>
 
       <section className="container mt-14 grid gap-8 lg:grid-cols-2">
         <div>
@@ -124,13 +149,13 @@ export default async function HomePage() {
         </div>
         <div className="rounded-lg bg-ink-900 p-6 text-white md:p-8">
           <h2 className="display text-2xl text-white">{dict.sell.title}</h2>
-          <p className="mt-2 text-ink-100">{fmt(dict.reg.subtitle, { fee: formatTzs(SITE.registrationFeeTzs) })}</p>
+          <p className="mt-2 text-ink-100">{listNote}</p>
           <ol className="mt-5 space-y-2 text-sm text-ink-100">
             <li><span className="plate mr-2 px-1.5 py-0 text-xs">1</span>{dict.sell.step1} & {dict.sell.step2.toLowerCase()}</li>
             <li><span className="plate mr-2 px-1.5 py-0 text-xs">2</span>{dict.sell.step4}</li>
             <li><span className="plate mr-2 px-1.5 py-0 text-xs">3</span>{locale === "sw" ? "Pokea simu na WhatsApp kutoka kwa wanunuzi" : "Get calls and WhatsApp messages from buyers"}</li>
           </ol>
-          <Link href="/dashboard/registration" className="btn-plate mt-6">{dict.reg.registerNow}</Link>
+          <Link href="/sell?as=private" className="btn-plate mt-6">{listCta}</Link>
         </div>
       </section>
     </>

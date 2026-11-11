@@ -6,7 +6,8 @@ import { getSellerInventory } from "@/server/dashboard";
 import { Img } from "@/components/ui/Img";
 import { Badge } from "@/components/ui/Badge";
 import { InventoryActions } from "@/components/dashboard/InventoryActions";
-import { formatTzsCompact } from "@/lib/money";
+import { formatTzs, formatTzsCompact } from "@/lib/money";
+import { getMonetisation, listingFeesOn } from "@/lib/settings";
 
 const TONE: Record<string, "go" | "plate" | "muted" | "danger" | "ink"> = { ACTIVE: "go", PENDING_REVIEW: "plate", DRAFT: "plate", REJECTED: "danger", SOLD: "ink", EXPIRED: "muted" };
 
@@ -14,7 +15,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const { renew } = await searchParams;
   const user = await requireUser("/dashboard/listings");
   const { dict } = await getDictionary();
-  const rows = await getSellerInventory(user.id);
+  const [rows, money] = await Promise.all([getSellerInventory(user.id), getMonetisation()]);
+  const feeLabel = listingFeesOn(money) ? formatTzs(money.privateListingFee) : null;
   const now = new Date();
   return (
     <div className="space-y-5">
@@ -46,9 +48,10 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                       {expiresSoon ? `Expires in ${Math.max(0, daysLeft!)} day${daysLeft === 1 ? "" : "s"} — renew to keep it live` : `Live until ${l.expiresAt.toLocaleDateString("en-GB")}`}
                     </p>
                   )}
-                  {l.status === "EXPIRED" && <p className="text-xs font-semibold text-danger">Expired — buyers can no longer see it. Renew for free.</p>}
+                  {l.status === "EXPIRED" && <p className="text-xs font-semibold text-danger">Expired — buyers can no longer see it. {!l.isFreeListing && feeLabel ? `Renew for ${feeLabel}.` : "Renew for free."}</p>}
+                  {l.status === "DRAFT" && !l.isFreeListing && <p className="text-xs font-semibold text-ink-700">Not published yet — pay the listing fee to send it live.</p>}
                 </div>
-                <InventoryActions id={l.id} status={l.status} expiresSoon={expiresSoon} />
+                <InventoryActions id={l.id} status={l.status} expiresSoon={expiresSoon} renewFee={!l.isFreeListing ? feeLabel : null} />
               </li>
             );
           })}

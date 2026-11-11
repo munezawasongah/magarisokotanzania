@@ -3,9 +3,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/client";
-import { enumLabel, fmt } from "@/i18n";
-import { formatTzs } from "@/lib/money";
-import { SITE } from "@/config/site";
+import { enumLabel } from "@/i18n";
 import { LegalText } from "@/components/legal/LegalText";
 
 const TYPES = [["BUYER", "Buyer"], ["SELLER", "Private seller"], ["DEALER", "DEALERSHIP"], ["YARD", "CAR_YARD"], ["IMPORTER", "IMPORTER"], ["PARTS_VENDOR", "PARTS_VENDOR"], ["SERVICE_PROVIDER", "SERVICE_PROVIDER"]] as const;
@@ -42,7 +40,7 @@ export function RegisterForm() {
         <select id="r-type" className="field" {...field("accountType")}>
           {TYPES.map(([v, fb]) => <option key={v} value={v}>{label(v, fb)}</option>)}
         </select>
-        {f.accountType !== "BUYER" && <p className="mt-1.5 text-xs text-ink-500">{fmt(dict.reg.subtitle, { fee: formatTzs(SITE.registrationFeeTzs) })}</p>}
+        {f.accountType !== "BUYER" && <p className="mt-1.5 text-xs text-ink-500">{dict.reg.needRegistration}</p>}
       </div>
       <div>
         <label className="label" htmlFor="r-name">{dict.auth.name}</label>

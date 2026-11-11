@@ -16,18 +16,31 @@ export const SITE = {
   /** Scam and safety reports */
   safetyEmail: "safety@magarisoko.co.tz",
   /** Date shown as "Last updated" on the legal pages (ISO) */
-  legalUpdated: "2026-10-22",
+  legalUpdated: "2026-11-11",
   country: "TZ",
+  countryName: "Tanzania",
   currency: "TZS",
-  /** One-off registration fee (TZS) for sellers, dealers, importers, parts vendors and service providers */
-  registrationFeeTzs: 30_000,
-  /** Active listings allowed for a registered shop without a paid plan */
+  /** Shown before every amount: "TSh 45,000,000" */
+  currencySymbol: "TSh",
+  /** Business day boundaries, receipts and reports */
+  timeZone: "Africa/Dar_es_Salaam",
+  /** Country calling code without "+" */
+  dialCode: "255",
+  flag: "🇹🇿",
+  /** Labels for the business registration numbers stored on a mini-site (columns tin / brelaRegNo) */
+  taxIdLabel: "TIN (TRA)",
+  companyRegLabel: "BRELA registration no.",
+  /** Where the admin checks those numbers */
+  taxIdCheck: "the TIN on the TRA portal and the registration on BRELA ORS",
+  /** Live listings a private seller may have at once (anti-dealer-in-disguise cap) */
   baseActiveListings: 20,
   /**
    * Manual mobile-money payment option shown during registration (admin checks the
    * transaction code against the statement). Leave lipaNamba empty to hide it.
    */
   manualPayment: {
+    /** What the manual option is called locally */
+    label: "Lipa Namba",
     lipaNamba: process.env.NEXT_PUBLIC_LIPA_NAMBA || "",
     accountName: process.env.NEXT_PUBLIC_LIPA_NAME || "Jatelo Technologies",
     network: process.env.NEXT_PUBLIC_LIPA_NETWORK || "M-Pesa / Mixx by Yas / Airtel Money",
@@ -38,6 +51,35 @@ export const SITE = {
 } as const;
 
 /** Monthly subscription plans per business type (seeded into `Plan`). */
+/**
+ * How the marketplace charges. These are the defaults; the admin changes them at
+ * Admin → Pricing & fees without a redeploy (stored in SiteSetting "monetisation").
+ *
+ *   LAUNCH — every listing is free for everyone (liquidity first).
+ *   PAID   — private sellers get their first `freePrivateListings` free, then pay
+ *            `privateListingFee` per listing for each `listingLifetimeDays` period;
+ *            businesses get `businessFreeListings` live listings without a plan and
+ *            subscribe to a monthly plan for more.
+ * Featured / Bump boosts and business plans can be bought in either phase.
+ * There is never a commission on a sale.
+ */
+export const MONETISATION_DEFAULTS = {
+  phase: "LAUNCH" as "LAUNCH" | "PAID",
+  /** One-off sign-up fee for businesses (dealers, yards, importers, parts shops, garages). 0 = free. Private sellers never pay one. */
+  registrationFee: 0,
+  freePrivateListings: 2,
+  privateListingFee: 10_000,
+  businessFreeListings: 3,
+};
+
+/** Price-band chips under the hero search (whole shillings). */
+export const PRICE_BANDS: ReadonlyArray<{ min?: number; max?: number }> = [
+  { max: 10_000_000 },
+  { min: 10_000_000, max: 20_000_000 },
+  { min: 20_000_000, max: 50_000_000 },
+  { min: 50_000_000 },
+];
+
 export const PLAN_SEED = [
   { code: "DEALER_STARTER", name: "Dealer Starter", businessType: "DEALERSHIP", priceTzsMonthly: 150_000, priceTzsYearly: 1_500_000, maxActiveListings: 25, featuredCredits: 2, leadAnalytics: false, verifiedBadge: false, sortOrder: 1 },
   { code: "DEALER_PRO", name: "Dealer Pro", businessType: "DEALERSHIP", priceTzsMonthly: 350_000, priceTzsYearly: 3_500_000, maxActiveListings: 100, featuredCredits: 8, leadAnalytics: true, verifiedBadge: true, sortOrder: 2 },

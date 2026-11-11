@@ -19,7 +19,7 @@ export type PayItem = { code: string; name: string; priceTzs: number; note?: str
  * phone and this component polls until the gateway confirms. Card: redirect.
  */
 export function PaymentForm({ purpose, items, listingId, businessId, defaultPhone, successHref, billing }: {
-  purpose: "PROMOTION" | "SUBSCRIPTION" | "REGISTRATION_FEE"; items: PayItem[]; listingId?: string; businessId?: string;
+  purpose: "PROMOTION" | "SUBSCRIPTION" | "REGISTRATION_FEE" | "LISTING_FEE"; items: PayItem[]; listingId?: string; businessId?: string;
   defaultPhone?: string | null; successHref: string; billing?: "monthly" | "yearly";
 }) {
   const { dict } = useI18n();

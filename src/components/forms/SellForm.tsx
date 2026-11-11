@@ -91,6 +91,7 @@ export function SellForm({ makes, regions, shop, defaultPhone }: { makes: MakeOp
         setStep(firstStep);
         return;
       }
+      if (r.result.requiresPayment) { window.location.href = `/dashboard/listings/${r.result.id}/pay`; return; }
       setDone(r.result.status === "ACTIVE" ? r.result.slug : "pending");
     });
   }

@@ -6,7 +6,9 @@ import type { PaymentGateway, PaymentProvider } from "@/generated/prisma/enums";
 import type { PaymentInitInput } from "@/lib/validation";
 import type { SessionUser } from "@/lib/session";
 import { absoluteUrl } from "@/lib/utils";
-import { ListingError } from "../listings";
+import { ListingError, publishIfSafe } from "../listings";
+import { getMonetisation } from "@/lib/settings";
+import { SITE } from "@/config/site";
 import type { InitiateResult, PaymentGatewayAdapter } from "./types";
 import { azampay } from "./azampay";
 import { selcom } from "./selcom";
@@ -26,7 +28,7 @@ const mock: PaymentGatewayAdapter = {
   isConfigured: () => process.env.NODE_ENV !== "production",
   supports: () => true,
   async initiate(p): Promise<InitiateResult> {
-    console.info(`💳 [mock payment] ${p.reference} TZS ${p.amountTzs} via ${p.provider} ${p.msisdn ?? ""}`);
+    console.info(`💳 [mock payment] ${p.reference} ${SITE.currency} ${p.amountTzs} via ${p.provider} ${p.msisdn ?? ""}`);
     return { ok: true, status: "PENDING", gatewayRef: `MOCK-${p.reference}` };
   },
 };
@@ -67,9 +69,24 @@ async function resolveCharge(user: SessionUser, input: PaymentInitInput) {
     if (!reg) throw new ListingError("Fill in your registration details first", 400);
     if (reg.status === "APPROVED") throw new ListingError("Your registration is already approved", 409);
     if (reg.status === "PAYMENT_SUBMITTED") throw new ListingError("Your payment is already waiting for admin verification", 409);
-    return { amountTzs: reg.feeTzs, description: "MagariSOKO Tanzania seller registration", metadata: { registrationId: reg.id } };
+    if (reg.feeTzs <= BigInt(0)) throw new ListingError("Registration is free — save your details to finish", 409);
+    return { amountTzs: reg.feeTzs, description: `${SITE.name} seller registration`, metadata: { registrationId: reg.id } };
   }
-  if (input.purpose === "LISTING_FEE") throw new ListingError("Listings have no per-listing fee. Sellers pay the one-off registration fee.", 400);
+  if (input.purpose === "LISTING_FEE") {
+    const listing = await prisma.listing.findUnique({ where: { id: input.listingId! }, select: { id: true, sellerId: true, title: true, status: true, isFreeListing: true, rejectionReason: true } });
+    if (!listing || listing.sellerId !== user.id) throw new ListingError("Listing not found", 404);
+    if (listing.isFreeListing) throw new ListingError("This listing is free — there is nothing to pay", 409);
+    if (listing.status === "ARCHIVED" && listing.rejectionReason === "Removed: fraud") throw new ListingError("This listing was removed by our safety team", 403);
+    const renew = listing.status !== "DRAFT";
+    if (renew && !["ACTIVE", "EXPIRED"].includes(listing.status)) throw new ListingError("Only unpaid, live or expired listings can be paid for", 409);
+    const money = await getMonetisation();
+    if (money.privateListingFee <= 0) throw new ListingError("Listing fees are switched off — renew for free from your dashboard", 409);
+    return {
+      amountTzs: BigInt(money.privateListingFee),
+      description: `Listing ${SITE.listingLifetimeDays} days: ${listing.title}`.slice(0, 100),
+      metadata: { listingId: listing.id, renew: renew ? "1" : "0" },
+    };
+  }
   // SUBSCRIPTION
   const [plan, member] = await Promise.all([
     prisma.plan.findUnique({ where: { code: input.planCode! } }),
@@ -137,12 +154,14 @@ function toJson(v: unknown): Prisma.InputJsonValue | undefined {
 export async function fulfillPayment(paymentId: string, opts: { gatewayRef?: string; raw?: unknown; paidAmountTzs?: number } = {}) {
   const result = await deliverPayment(paymentId, opts);
   if (result.delivered) {
-    // A completed mobile-money payment proves control of a NIDA-registered SIM wallet.
+    // A completed mobile-money payment proves control of an ID-registered SIM wallet.
     const p = await prisma.payment.findUnique({
       where: { id: paymentId },
       select: { userId: true, msisdn: true, provider: true, amountTzs: true, purpose: true, reference: true, gatewayRef: true, paidAt: true, metadata: true },
     });
     if (p?.msisdn && p.provider !== "CARD") await markWalletVerified(p.userId, p.msisdn);
+    const listingId = (p?.metadata as Record<string, string> | null)?.listingId;
+    if (p?.purpose === "LISTING_FEE" && listingId) await publishIfSafe(listingId).catch((e) => console.error("publish after listing fee", e));
     if (p) void sendReceipt(p);
   }
   return result;
@@ -184,7 +203,19 @@ async function deliverPayment(paymentId: string, opts: { gatewayRef?: string; ra
       // Paid, but an admin must still verify before the mini-site is created.
       await markRegistrationPaid(tx, payment.userId, paymentId);
     } else if (payment.purpose === "LISTING_FEE") {
-      await tx.listing.updateMany({ where: { id: meta.listingId, status: "DRAFT" }, data: { status: "PENDING_REVIEW" } });
+      const days = SITE.listingLifetimeDays * 86400_000;
+      const l = await tx.listing.findUniqueOrThrow({ where: { id: meta.listingId }, select: { status: true, expiresAt: true } });
+      if (l.status === "DRAFT") {
+        // first payment: into review (published at once if the fraud check is clean — see fulfillPayment)
+        await tx.listing.update({ where: { id: meta.listingId }, data: { status: "PENDING_REVIEW", expiresAt: new Date(now.getTime() + days), expiryNotifiedAt: null } });
+      } else {
+        // renewal: another period from today, or from the current expiry if it is still running
+        const from = Math.max(now.getTime(), l.status === "ACTIVE" ? l.expiresAt?.getTime() ?? 0 : 0);
+        await tx.listing.update({
+          where: { id: meta.listingId },
+          data: { expiresAt: new Date(from + days), expiryNotifiedAt: null, ...(l.status === "EXPIRED" ? { status: "ACTIVE" } : {}) },
+        });
+      }
     } else if (payment.purpose === "SUBSCRIPTION" && payment.businessId) {
       const months = meta.billing === "yearly" ? 12 : 1;
       const current = await tx.subscription.findFirst({
@@ -246,12 +277,14 @@ const RECEIPT_FOR: Record<string, string> = {
 /** SMS + email receipt for every successful payment (proof of payment for the customer's records). */
 async function sendReceipt(p: { userId: string; amountTzs: bigint; purpose: string; reference: string; gatewayRef: string | null; paidAt: Date | null; provider: string; metadata: unknown }) {
   const what = RECEIPT_FOR[p.purpose] ?? p.purpose;
-  const when = (p.paidAt ?? new Date()).toLocaleString("en-GB", { timeZone: "Africa/Dar_es_Salaam", dateStyle: "medium", timeStyle: "short" });
+  const when = (p.paidAt ?? new Date()).toLocaleString("en-GB", { timeZone: SITE.timeZone, dateStyle: "medium", timeStyle: "short" });
   const next = p.purpose === "REGISTRATION_FEE"
     ? "Our team will now verify your payment and approve your registration. You will get an SMS when your mini-site is live."
-    : "Thank you for advertising on MagariSOKO Tanzania.";
+    : p.purpose === "LISTING_FEE"
+      ? `Your listing is paid for ${SITE.listingLifetimeDays} days. New listings go live as soon as our safety check clears them.`
+      : `Thank you for advertising on ${SITE.name}.`;
   await notifyUser(p.userId, {
-    sms: `MagariSOKO Tanzania: Payment received ${formatTzs(p.amountTzs)} for ${what}. Ref ${p.reference}. Asante!`,
+    sms: `${SITE.name}: Payment received ${formatTzs(p.amountTzs)} for ${what}. Ref ${p.reference}. Asante!`,
     email: {
       subject: `Receipt: ${formatTzs(p.amountTzs)} — ${what}`,
       lines: [
@@ -259,7 +292,7 @@ async function sendReceipt(p: { userId: string; amountTzs: bigint; purpose: stri
         `Date: ${when} (EAT). Paid with: ${p.provider.replace(/_/g, " ")}. Our reference: ${p.reference}${p.gatewayRef ? `. Provider reference: ${p.gatewayRef}` : ""}.`,
         next,
       ],
-      action: { label: "Open my dashboard", url: absoluteUrl(p.purpose === "REGISTRATION_FEE" ? "/dashboard/registration" : "/dashboard") },
+      action: { label: "Open my dashboard", url: absoluteUrl(p.purpose === "REGISTRATION_FEE" ? "/dashboard/registration" : p.purpose === "LISTING_FEE" ? "/dashboard/listings" : "/dashboard") },
     },
   });
 }

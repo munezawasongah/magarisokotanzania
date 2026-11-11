@@ -9,12 +9,14 @@ import { SellForm } from "@/components/forms/SellForm";
 
 export const metadata = { title: "Sell your vehicle", robots: { index: false } };
 
-export default async function SellPage() {
-  const user = await requireUser("/sell");
+export default async function SellPage({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
+  const { as } = await searchParams;
+  const user = await requireUser(as === "private" ? "/sell?as=private" : "/sell");
   const { dict } = await getDictionary();
   const isAdmin = user.roles.includes("ADMIN");
   const shop = await getMyShop(user.id);
-  if (!shop && !isAdmin) redirect("/dashboard/registration");
+  // "List your car free" sends private sellers straight to the free private-seller sign-up
+  if (!shop && !isAdmin) redirect(as === "private" ? "/dashboard/registration?type=SELLER" : "/dashboard/registration");
   if (shop && !CAN_LIST_VEHICLES.includes(shop.type)) {
     return (
       <div className="container max-w-xl py-16">

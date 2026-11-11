@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "./prisma";
 import { DEFAULT_IMPORT_TAX_RULES, type ImportTaxRules } from "@/config/import-tax";
+import { MONETISATION_DEFAULTS } from "@/config/site";
 
 export async function getImportTaxRules(): Promise<ImportTaxRules> {
   const row = await prisma.siteSetting.findUnique({ where: { key: "importTaxRules" } }).catch(() => null);
@@ -46,3 +47,26 @@ export async function getBodyTypePhotoCredits(): Promise<Array<PhotoCredit & { b
     .filter(([body, c]) => c && photos[body] === c.url)
     .map(([body, c]) => ({ body, ...c }));
 }
+
+/* ─────────── monetisation (listing fees, sign-up fee, phase) ─────────── */
+
+export type Monetisation = typeof MONETISATION_DEFAULTS;
+
+export async function getMonetisation(): Promise<Monetisation> {
+  const row = await prisma.siteSetting.findUnique({ where: { key: "monetisation" } }).catch(() => null);
+  return { ...MONETISATION_DEFAULTS, ...((row?.value as Partial<Monetisation> | undefined) ?? {}) };
+}
+
+export async function setMonetisation(m: Monetisation) {
+  const value = {
+    phase: m.phase === "PAID" ? "PAID" : "LAUNCH",
+    registrationFee: Math.max(0, Math.round(m.registrationFee)),
+    freePrivateListings: Math.max(0, Math.round(m.freePrivateListings)),
+    privateListingFee: Math.max(0, Math.round(m.privateListingFee)),
+    businessFreeListings: Math.max(0, Math.round(m.businessFreeListings)),
+  };
+  await prisma.siteSetting.upsert({ where: { key: "monetisation" }, create: { key: "monetisation", value }, update: { value } });
+}
+
+/** Private sellers pay per listing only in the PAID phase and only when the fee is above zero. */
+export const listingFeesOn = (m: Monetisation) => m.phase === "PAID" && m.privateListingFee > 0;

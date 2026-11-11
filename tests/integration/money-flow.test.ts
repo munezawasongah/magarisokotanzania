@@ -1,6 +1,6 @@
 /**
  * The money flow, end to end, against a throw-away database:
- *   sign-up → registration details → TSh 30,000 payment → admin approval → mini-site →
+ *   sign-up → registration details → business sign-up fee (when set) → admin approval → mini-site →
  *   car listing (price + mileage enforced) → publish → saved-search alert →
  *   price drop alert → review → revenue report; plus password reset and the
  *   database guards (no price = no listing).
@@ -13,6 +13,8 @@ import { listingCreateSchema, paymentInitSchema, partCreateSchema, shopSchema } 
 import { approveRegistration, rejectRegistration, saveRegistrationDetails, submitManualPayment, getMyShop } from "@/server/registration";
 import { fulfillPayment, initiatePayment } from "@/server/payments";
 import { createListing, updateListing } from "@/server/listings";
+import { setMonetisation } from "@/lib/settings";
+import { MONETISATION_DEFAULTS } from "@/config/site";
 import { moderateListing } from "@/server/admin";
 import { createPart, setPartStatus, updatePart } from "@/server/parts";
 import { notifyPriceDrops, notifySavedSearches, saveSearch, sendExpiryWarnings } from "@/server/alerts";
@@ -51,7 +53,9 @@ afterAll(async () => {
 const shop = (name: string, phone: string, extra: Record<string, unknown> = {}) =>
   shopSchema.parse({ name, phone, regionId: 1, address: "Mikocheni B, near Shoppers Plaza", latitude: -6.76, longitude: 39.25, ...extra });
 
-describe("seller registration (TSh 30,000)", () => {
+describe("business registration with a sign-up fee (TSh 30,000)", () => {
+  beforeAll(async () => { await setMonetisation({ ...MONETISATION_DEFAULTS, registrationFee: 30_000 }); });
+
   it("cannot list a car before registering", async () => {
     const input = listingCreateSchema.parse({ makeId, modelId, year: 2016, condition: "FOREIGN_USED", bodyType: "SUV", transmission: "AUTOMATIC", fuelType: "PETROL", mileageKm: 78000, description: "Clean Harrier with full service history, viewing any day.", priceTzs: "62m", regionId, confirmOwnership: true });
     await expect(createListing(dealer, input)).rejects.toThrow(/registration/i);
@@ -94,7 +98,7 @@ describe("seller registration (TSh 30,000)", () => {
     await rejectRegistration(admin, r1.id, "Code not found on statement");
     const r2 = await submitManualPayment(garage, "QJK7H2LM9Q", "+255688333222");
     const other = await user("Someone Else", "+255622111000");
-    await saveRegistrationDetails(other, "SELLER", shop("Someone", "0622111000", { regionId }));
+    await saveRegistrationDetails(other, "PARTS_VENDOR", shop("Someone Spares", "0622111000", { regionId }));
     await expect(submitManualPayment(other, "QJK7H2LM9Q", "+255622111000")).rejects.toThrow(/already been used/);
     await approveRegistration(admin, r2.id);
     garage.roles = [...garage.roles, "SERVICE_PROVIDER"];
@@ -219,5 +223,99 @@ describe("revenue report", () => {
     expect(r.byMethod.map((m) => m.key).sort()).toEqual(["LIPA_NAMBA", "MPESA"]);
     expect(r.byPurpose[0]).toMatchObject({ key: "REGISTRATION_FEE", tzs: 60_000, count: 2 });
     expect(r.series.reduce((s, p) => s + p.tzs, 0)).toBe(60_000);
+  });
+});
+
+describe("pricing model: free while launching, then first listings free and a fee per listing", () => {
+  let seller: SessionUser;
+  const car = (year: number) => listingCreateSchema.parse({ makeId, modelId, year, condition: "FOREIGN_USED", bodyType: "SUV", transmission: "AUTOMATIC", fuelType: "PETROL", mileageKm: 91000 + year, description: "Well kept family car, all papers in order, viewing in Mikocheni.", priceTzs: "41m", regionId, confirmOwnership: true });
+  const days = (d: Date | null) => ((d?.getTime() ?? 0) - Date.now()) / 86400_000;
+
+  beforeAll(async () => {
+    await setMonetisation({ ...MONETISATION_DEFAULTS, phase: "LAUNCH", registrationFee: 0 });
+    seller = await user("Baraka Private", "+255765432100");
+  });
+
+  it("a private seller signs up free and the mini-site is live at once", async () => {
+    const reg = await saveRegistrationDetails(seller, "SELLER", shop("Baraka's cars", "0765432100", { regionId }));
+    expect(reg.status).toBe("APPROVED");
+    expect(Number(reg.feeTzs)).toBe(0);
+    expect((await getMyShop(seller.id))?.type).toBe("PRIVATE_SELLER");
+    seller.roles = [...seller.roles, "SELLER"];
+  });
+
+  it("during launch every listing is free", async () => {
+    for (const y of [2014, 2015, 2016]) {
+      const r = await createListing(seller, car(y));
+      expect(r.requiresPayment).toBe(false);
+      expect(r.status).not.toBe("DRAFT");
+    }
+    expect(await prisma.listing.count({ where: { sellerId: seller.id, isFreeListing: true } })).toBe(3);
+  });
+
+  it("with listing fees on, a seller past the free allowance gets an unpaid draft that cannot be published without paying", async () => {
+    await setMonetisation({ ...MONETISATION_DEFAULTS, phase: "PAID", freePrivateListings: 2, privateListingFee: 10_000 });
+    const r = await createListing(seller, car(2017));
+    expect(r.requiresPayment).toBe(true);
+    expect(r.feeTzs).toBe(10_000);
+    expect(r.status).toBe("DRAFT");
+    await expect(updateListing(seller, r.id, { status: "ACTIVE" })).rejects.toThrow(/listing fee/);
+    // someone else cannot pay for (or see the charge of) another seller's listing
+    await expect(initiatePayment(buyer, paymentInitSchema.parse({ purpose: "LISTING_FEE", listingId: r.id, provider: "MPESA", msisdn: "0744111222" }))).rejects.toThrow(/not found/i);
+
+    const pay = await initiatePayment(seller, paymentInitSchema.parse({ purpose: "LISTING_FEE", listingId: r.id, provider: "MPESA", msisdn: "0765432100" }));
+    expect(Number((await prisma.payment.findUniqueOrThrow({ where: { id: pay.paymentId } })).amountTzs)).toBe(10_000);
+    await fulfillPayment(pay.paymentId, { gatewayRef: "MPESA-LF-1" });
+    expect((await fulfillPayment(pay.paymentId)).delivered).toBe(false);
+    const l = await prisma.listing.findUniqueOrThrow({ where: { id: r.id } });
+    expect(["PENDING_REVIEW", "ACTIVE"]).toContain(l.status);
+    expect(days(l.expiresAt)).toBeGreaterThan(59);
+    // a free listing cannot be charged for
+    const free = await prisma.listing.findFirstOrThrow({ where: { sellerId: seller.id, isFreeListing: true } });
+    await expect(initiatePayment(seller, paymentInitSchema.parse({ purpose: "LISTING_FEE", listingId: free.id, provider: "MPESA", msisdn: "0765432100" }))).rejects.toThrow(/free/);
+  });
+
+  it("listings made free stay free to renew; a paid listing renews only with the fee, which adds a full period", async () => {
+    const free = await prisma.listing.findFirstOrThrow({ where: { sellerId: seller.id, isFreeListing: true } });
+    await prisma.listing.update({ where: { id: free.id }, data: { status: "ACTIVE", expiresAt: new Date(Date.now() + 3 * 86400_000) } });
+    await updateListing(seller, free.id, { renew: true });
+    expect(days((await prisma.listing.findUniqueOrThrow({ where: { id: free.id } })).expiresAt)).toBeGreaterThan(59);
+
+    const paid = await prisma.listing.findFirstOrThrow({ where: { sellerId: seller.id, isFreeListing: false } });
+    await prisma.listing.update({ where: { id: paid.id }, data: { status: "EXPIRED", expiresAt: new Date(Date.now() - 86400_000) } });
+    await expect(updateListing(seller, paid.id, { renew: true })).rejects.toThrow(/listing fee/);
+    const pay = await initiatePayment(seller, paymentInitSchema.parse({ purpose: "LISTING_FEE", listingId: paid.id, provider: "MPESA", msisdn: "0765432100" }));
+    await fulfillPayment(pay.paymentId);
+    const after = await prisma.listing.findUniqueOrThrow({ where: { id: paid.id } });
+    expect(after.status).toBe("ACTIVE");
+    expect(days(after.expiresAt)).toBeGreaterThan(59);
+  });
+
+  it("a new private seller still gets the first two listings free in the paid phase", async () => {
+    const newbie = await user("Rehema New", "+255754000111");
+    await saveRegistrationDetails(newbie, "SELLER", shop("Rehema", "0754000111", { regionId }));
+    expect((await createListing(newbie, car(2012))).requiresPayment).toBe(false);
+    expect((await createListing(newbie, car(2013))).requiresPayment).toBe(false);
+    expect((await createListing(newbie, car(2018))).requiresPayment).toBe(true);
+  });
+
+  it("a business without a plan is held to the free allowance in the paid phase, and is unlimited during launch", async () => {
+    const live = await prisma.listing.count({ where: { sellerId: dealer.id, status: { in: ["ACTIVE", "PENDING_REVIEW"] } } });
+    await setMonetisation({ ...MONETISATION_DEFAULTS, phase: "PAID", businessFreeListings: live });
+    await expect(createListing(dealer, car(2019))).rejects.toThrow(/plan/);
+    await setMonetisation({ ...MONETISATION_DEFAULTS, phase: "LAUNCH" });
+    expect((await createListing(dealer, car(2019))).requiresPayment).toBe(false);
+  });
+
+  it("with the sign-up fee at zero, a business saved while a fee applied can finish for free", async () => {
+    const shopOwner = await user("Kilimo Spares", "+255713000222");
+    await setMonetisation({ ...MONETISATION_DEFAULTS, registrationFee: 25_000 });
+    const waiting = await saveRegistrationDetails(shopOwner, "PARTS_VENDOR", shop("Kilimo Spares", "0713000222", { regionId }));
+    expect(waiting.status).toBe("AWAITING_PAYMENT");
+    await setMonetisation({ ...MONETISATION_DEFAULTS, registrationFee: 0 });
+    const { completeFreeRegistration } = await import("@/server/registration");
+    const biz = await completeFreeRegistration(shopOwner);
+    expect(biz.type).toBe("PARTS_VENDOR");
+    expect((await prisma.sellerRegistration.findUniqueOrThrow({ where: { userId: shopOwner.id } })).status).toBe("APPROVED");
   });
 });

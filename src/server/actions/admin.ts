@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/session";
 import { moderateListing, verifyBusiness } from "@/server/admin";
-import { setImportTaxRules } from "@/lib/settings";
+import { setImportTaxRules, setMonetisation } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_IMPORT_TAX_RULES } from "@/config/import-tax";
 import { redirect } from "next/navigation";
@@ -190,4 +190,24 @@ export async function rejectRegistrationAction(formData: FormData) {
     throw e;
   }
   revalidatePath("/admin/registrations");
+}
+
+/* ─────────── pricing & fees (monetisation phase) ─────────── */
+
+export async function saveMonetisationAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user?.roles.includes("ADMIN")) throw new ListingError("Forbidden", 403);
+  const n = (k: string) => Number(String(formData.get(k) ?? "0").replace(/[,\s]/g, "")) || 0;
+  const value = {
+    phase: formData.get("phase") === "PAID" ? ("PAID" as const) : ("LAUNCH" as const),
+    registrationFee: n("registrationFee"),
+    freePrivateListings: n("freePrivateListings"),
+    privateListingFee: n("privateListingFee"),
+    businessFreeListings: n("businessFreeListings"),
+  };
+  await setMonetisation(value);
+  await prisma.auditLog.create({ data: { actorId: user.id, action: "settings.monetisation", entityType: "SiteSetting", entityId: "monetisation", meta: value } });
+  revalidatePath("/pricing");
+  revalidatePath("/");
+  redirect("/admin/pricing?saved=1");
 }

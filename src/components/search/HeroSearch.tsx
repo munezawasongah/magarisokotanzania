@@ -6,11 +6,19 @@ import { useI18n } from "@/i18n/client";
 import { enumLabel } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { PartCategory } from "@/generated/prisma/enums";
+import { SITE } from "@/config/site";
 
 type MakeOpt = { id: number; name: string; slug: string; isPopular: boolean; models: Array<{ id: number; name: string; slug: string }> };
 type RegionOpt = { slug: string; name: string };
 
-const PRICE_STEPS = [5, 10, 15, 20, 30, 40, 50, 70, 100, 150, 200, 300].map((m) => m * 1_000_000);
+/** Max-price options: 1, 1.5, 2, 3, 4, 5, 7 × the smallest price band, ×10, ×100 (TZ: 5M…300M, KE: 500K…30M). */
+const PRICE_STEPS = (() => {
+  const base = SITE.currency === "TZS" ? 5_000_000 : 500_000;
+  return [1, 2, 3, 4, 6, 8, 10, 14, 20, 30, 40, 60].map((m) => m * base);
+})();
+const stepLabel = (n: number) => `${SITE.currencySymbol} ${n >= 1e6 ? `${+(n / 1e6).toFixed(1)}M` : `${n / 1e3}K`}`;
+
+export type BandChip = { label: string; href: string; count?: number };
 const YEARS = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i);
 
 /**
@@ -19,7 +27,7 @@ const YEARS = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i)
  */
 type Tab = "all" | "cars" | "parts";
 
-export function HeroSearch({ makes, regions, defaultTab = "all" }: { makes: MakeOpt[]; regions: RegionOpt[]; defaultTab?: Tab }) {
+export function HeroSearch({ makes, regions, defaultTab = "all", bands = [] }: { makes: MakeOpt[]; regions: RegionOpt[]; defaultTab?: Tab; bands?: BandChip[] }) {
   const { dict } = useI18n();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(defaultTab);
@@ -105,7 +113,7 @@ export function HeroSearch({ makes, regions, defaultTab = "all" }: { makes: Make
             </select>
             <select className="field" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} aria-label={dict.hero.maxPrice}>
               <option value="">{dict.hero.maxPrice}</option>
-              {PRICE_STEPS.map((p) => <option key={p} value={p}>TSh {p / 1_000_000}M</option>)}
+              {PRICE_STEPS.map((p) => <option key={p} value={p}>{stepLabel(p)}</option>)}
             </select>
             <button className="btn-plate h-full min-h-11 px-6 sm:col-span-2 lg:col-span-1" type="submit">
               <Search className="h-4 w-4" /> {dict.hero.search}
@@ -133,6 +141,17 @@ export function HeroSearch({ makes, regions, defaultTab = "all" }: { makes: Make
               </select>
             </div>
             <button className="btn-plate min-h-11 px-6" type="submit"><Search className="h-4 w-4" /> {dict.hero.search}</button>
+          </div>
+        )}
+        {tab !== "parts" && bands.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2" aria-label={dict.hero.budget}>
+            <span className="text-xs text-ink-500">{dict.hero.budget}</span>
+            {bands.map((b) => (
+              <a key={b.href} href={b.href} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-100/60 px-3 py-1.5 text-xs font-semibold text-ink-900 transition-colors hover:border-ink-900 hover:bg-white">
+                {b.label}
+                {b.count !== undefined && <span className="font-normal tabular-nums text-ink-500">{b.count.toLocaleString()}</span>}
+              </a>
+            ))}
           </div>
         )}
         {tab !== "parts" && popular.length > 0 && (

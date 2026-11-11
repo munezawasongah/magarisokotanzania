@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { getDictionary } from "@/i18n/server";
-import { SITE } from "@/config/site";
+import { PRICE_BANDS, SITE } from "@/config/site";
+import { getBrowseCounts } from "@/server/browse-counts";
 import { Logo } from "./Header";
 import { formatTzPhone } from "@/lib/phone";
-import { fmt } from "@/i18n";
+import { enumLabel, fmt } from "@/i18n";
 
 export async function Footer() {
   const { dict, locale } = await getDictionary();
+  const browse = await getBrowseCounts([...PRICE_BANDS]).catch(() => ({ makes: [], bodies: [], bands: [] }));
   const cols = [
     { title: dict.nav.cars, links: [["SUVs", "/cars?body=SUV"], ["Pickups", "/cars?body=PICKUP"], ["4WD", "/cars?fourWd=1"], [dict.listing.importOnOrder, "/cars?importOnly=1"], ["Bodaboda & Bajaji", "/cars?body=MOTORCYCLE,THREE_WHEELER"]] },
     { title: dict.nav.parts, links: [["Toyota", "/parts?make=toyota"], ["Nissan", "/parts?make=nissan"], ["Subaru", "/parts?make=subaru"], [dict.enums.PartCategory.BRAKES, "/parts?category=BRAKES"], [dict.enums.PartCategory.TYRES_WHEELS, "/parts?category=TYRES_WHEELS"]] },
@@ -28,6 +30,30 @@ export async function Footer() {
             <a href={`mailto:${SITE.supportEmail}`} className="hover:text-white">{SITE.supportEmail}</a>
           </p>
         </div>
+        {(browse.makes.length > 0 || browse.bodies.length > 0) && (
+          <div className="mx-auto mt-12 grid max-w-5xl gap-8 border-y border-white/10 py-8 text-left md:grid-cols-2">
+            {browse.makes.length > 0 && (
+              <nav aria-label={dict.hero.byMake}>
+                <h2 className="mb-3 text-sm font-semibold text-white">{dict.hero.byMake}</h2>
+                <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                  {browse.makes.map((m) => (
+                    <li key={m.slug}><Link href={`/cars?make=${m.slug}`} className="hover:text-white">{m.name} <span className="tabular-nums text-ink-300/70">{m.count.toLocaleString()}</span></Link></li>
+                  ))}
+                </ul>
+              </nav>
+            )}
+            {browse.bodies.length > 0 && (
+              <nav aria-label={dict.hero.byBody}>
+                <h2 className="mb-3 text-sm font-semibold text-white">{dict.hero.byBody}</h2>
+                <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                  {browse.bodies.map((b) => (
+                    <li key={b.body}><Link href={`/cars?body=${b.body}`} className="hover:text-white">{enumLabel(dict, "BodyType", b.body)} <span className="tabular-nums text-ink-300/70">{b.count.toLocaleString()}</span></Link></li>
+                  ))}
+                </ul>
+              </nav>
+            )}
+          </div>
+        )}
         <div className="mx-auto mt-12 flex max-w-5xl flex-wrap justify-center gap-y-10">
           {cols.map((c) => (
             <div key={c.title} className="w-1/2 px-3 sm:w-1/3 lg:w-1/5">

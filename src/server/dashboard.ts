@@ -75,7 +75,7 @@ export async function getSellerInventory(userId: string) {
   const where = await ownedListingWhere(userId);
   return prisma.listing.findMany({
     where: { ...where, status: { not: "ARCHIVED" } },
-    select: { ...listingCardSelect, rejectionReason: true, whatsappClicks: true, callClicks: true, expiresAt: true, sponsoredUntil: true },
+    select: { ...listingCardSelect, rejectionReason: true, whatsappClicks: true, callClicks: true, expiresAt: true, sponsoredUntil: true, isFreeListing: true },
     orderBy: { createdAt: "desc" },
   });
 }

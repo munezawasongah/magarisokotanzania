@@ -6,14 +6,16 @@ import { TrendChart } from "@/components/dashboard/TrendChart";
 import { formatTzs, formatTzsCompact } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { fmt } from "@/i18n";
-import { SITE } from "@/config/site";
+import { getMonetisation } from "@/lib/settings";
+import { registrationSubtitle } from "@/lib/fees-text";
 
 export default async function DashboardHome() {
   const user = await requireUser();
   const { dict } = await getDictionary();
-  const [o, reg] = await Promise.all([
+  const [o, reg, money] = await Promise.all([
     getSellerOverview(user.id),
     prisma.sellerRegistration.findUnique({ where: { userId: user.id }, select: { status: true, rejectionReason: true } }),
+    getMonetisation(),
   ]);
   const approved = reg?.status === "APPROVED" || user.roles.includes("ADMIN");
   const tiles: Array<[string, number]> = [
@@ -34,7 +36,7 @@ export default async function DashboardHome() {
           ) : (
             <>
               <p className="font-semibold">{dict.reg.needRegistration}</p>
-              <p className="mt-1 text-sm text-ink-100">{reg?.status === "REJECTED" && reg.rejectionReason ? fmt(dict.reg.rejected, { reason: reg.rejectionReason }) : fmt(dict.reg.subtitle, { fee: formatTzs(SITE.registrationFeeTzs) })}</p>
+              <p className="mt-1 text-sm text-ink-100">{reg?.status === "REJECTED" && reg.rejectionReason ? fmt(dict.reg.rejected, { reason: reg.rejectionReason }) : registrationSubtitle(dict, money.registrationFee)}</p>
               <Link href="/dashboard/registration" className="btn-plate mt-4">{reg ? dict.reg.continue : dict.reg.registerNow}</Link>
             </>
           )}

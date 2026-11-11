@@ -1,9 +1,9 @@
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/i18n/server";
-import { fmt } from "@/i18n";
-import { formatTzs } from "@/lib/money";
 import { SITE } from "@/config/site";
+import { getMonetisation } from "@/lib/settings";
+import { registrationSubtitle } from "@/lib/fees-text";
 import { getRegionsWithDistricts } from "@/server/taxonomy";
 import { getMyRegistration } from "@/server/registration";
 import { REGISTRATION_TYPES } from "@/lib/validation";
@@ -22,10 +22,11 @@ export default async function RegistrationPage({ searchParams }: { searchParams:
   const user = await requireUser("/dashboard/registration");
   const { type } = await searchParams;
   const { dict } = await getDictionary();
-  const [reg, regions, dbUser] = await Promise.all([
+  const [reg, regions, dbUser, money] = await Promise.all([
     getMyRegistration(user.id),
     getRegionsWithDistricts(),
     prisma.user.findUnique({ where: { id: user.id }, select: { phone: true, name: true } }),
+    getMonetisation(),
   ]);
   const phone = dbUser?.phone ?? "";
   const business = reg?.businessId ? await prisma.business.findUnique({ where: { id: reg.businessId }, select: { slug: true, type: true } }) : null;
@@ -33,7 +34,7 @@ export default async function RegistrationPage({ searchParams }: { searchParams:
   const header = (
     <header>
       <h1 className="display text-2xl md:text-3xl">{dict.reg.title}</h1>
-      <p className="mt-2 max-w-2xl text-ink-500">{fmt(dict.reg.subtitle, { fee: formatTzs(SITE.registrationFeeTzs) })}</p>
+      <p className="mt-2 max-w-2xl text-ink-500">{registrationSubtitle(dict, money.registrationFee)}</p>
     </header>
   );
 
@@ -55,7 +56,8 @@ export default async function RegistrationPage({ searchParams }: { searchParams:
       {header}
       <RegistrationWizard
         regions={regions}
-        feeTzs={Number(reg?.feeTzs ?? SITE.registrationFeeTzs)}
+        businessFee={money.registrationFee}
+        savedFeeTzs={reg && reg.status !== "REJECTED" ? Number(reg.feeTzs) : null}
         defaultPhone={phone}
         initialType={initialType}
         initialShop={shopToValues(details ?? (dbUser?.name ? { name: dbUser.name } : null), phone)}

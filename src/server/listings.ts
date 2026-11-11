@@ -6,7 +6,7 @@ import type { ListingEventType, SellerType } from "@/generated/prisma/enums";
 import type { ListingCreateInput, ListingFilters } from "@/lib/validation";
 import { uniqueSlug } from "@/lib/slug";
 import { estimateLandedCost } from "@/lib/import-cost";
-import { getImportTaxRules } from "@/lib/settings";
+import { getImportTaxRules, getMonetisation, listingFeesOn } from "@/lib/settings";
 import { getUsdTzsRate } from "@/lib/fx";
 import { rateLimit } from "@/lib/rate-limit";
 import { SITE } from "@/config/site";
@@ -275,17 +275,28 @@ export async function createListing(user: SessionUser, input: ListingCreateInput
   if (!contactPhone) throw new ListingError("Add a contact phone number");
   const contactWhatsapp = input.contactWhatsapp ?? business?.whatsapp ?? dbUser.whatsapp ?? contactPhone;
 
-  // ── plan limits ──
-  const requiresPayment = false;
-  if (business) {
+  // ── what this listing costs, and how many live listings the account may have ──
+  const money = await getMonetisation();
+  const isPrivate = !business || business.type === "PRIVATE_SELLER";
+  let requiresPayment = false;
+  if (isPrivate) {
+    // private sellers: capped number of live listings; when listing fees are on, the first ones are free
+    const live = await prisma.listing.count({ where: { sellerId: user.id, status: { in: ["ACTIVE", "PENDING_REVIEW", "DRAFT"] } } });
+    if (live >= SITE.baseActiveListings) throw new ListingError(`Private sellers can have ${SITE.baseActiveListings} listings at a time. Mark sold cars, or register as a dealer.`, 402);
+    if (listingFeesOn(money) && !user.roles.includes("ADMIN")) {
+      const usedFree = await prisma.listing.count({ where: { sellerId: user.id, isFreeListing: true, status: { not: "REJECTED" } } });
+      requiresPayment = usedFree >= money.freePrivateListings;
+    }
+  } else {
+    // businesses: unlimited during launch; afterwards the plan's allowance, or the free allowance without a plan
     const sub = await prisma.subscription.findFirst({
       where: { businessId: business.id, status: { in: ["ACTIVE", "TRIALING"] }, currentPeriodEnd: { gt: new Date() } },
       include: { plan: true },
     });
-    const limit = sub?.plan.maxActiveListings ?? SITE.baseActiveListings;
+    const limit = sub?.plan.maxActiveListings ?? (money.phase === "PAID" ? money.businessFreeListings : -1);
     if (limit !== -1) {
       const active = await prisma.listing.count({ where: { businessId: business.id, status: { in: ["ACTIVE", "PENDING_REVIEW"] } } });
-      if (active >= limit) throw new ListingError(`Your account allows ${limit} active listings. Upgrade your plan or mark sold cars to add more.`, 402);
+      if (active >= limit) throw new ListingError(sub ? `Your plan allows ${limit} live listings. Upgrade your plan or mark sold cars to add more.` : `Without a plan your business can have ${limit} live listings. Choose a monthly plan to list more.`, 402);
     }
   }
 
@@ -305,7 +316,8 @@ export async function createListing(user: SessionUser, input: ListingCreateInput
   const autoTitle = [input.year, model.make.name, model.name, input.trim].filter(Boolean).join(" ");
   const title = input.title?.trim() || autoTitle;
   // Always start held; the fraud engine decides below whether it can go live instantly.
-  const status = "PENDING_REVIEW";
+  // An unpaid listing waits as a DRAFT until its listing fee is paid.
+  const status = requiresPayment ? "DRAFT" : "PENDING_REVIEW";
   const now = new Date();
   const device = await getDeviceContext();
   await recordDevice(user.id, device);
@@ -316,6 +328,7 @@ export async function createListing(user: SessionUser, input: ListingCreateInput
       title,
       description: input.description,
       status,
+      isFreeListing: !requiresPayment,
       sellerId: user.id,
       businessId: business?.id,
       sellerType,
@@ -372,14 +385,34 @@ export async function createListing(user: SessionUser, input: ListingCreateInput
 
   // ── fraud screening: photo fingerprints, then the full risk score ──
   await hashListingImages(created.id);
-  const risk = await scoreListing(created.id);
-  let finalStatus: string = created.status;
-  if (risk.level === "LOW" && (business?.verification === "VERIFIED" || (await isTrustedSeller(user.id)))) {
-    await prisma.listing.update({ where: { id: created.id }, data: { status: "ACTIVE", publishedAt: now } });
-    finalStatus = "ACTIVE";
-    void notifySavedSearches(created.id);
+  if (requiresPayment) {
+    const risk = await scoreListing(created.id);
+    return { ...created, status: created.status, requiresPayment, feeTzs: money.privateListingFee, riskLevel: risk.level };
   }
+  const { status: finalStatus, risk } = await publishIfSafe(created.id);
   return { ...created, status: finalStatus, requiresPayment, riskLevel: risk.level };
+}
+
+/**
+ * Scores a listing that is waiting for review and publishes it at once when the
+ * risk is LOW and the seller is a verified business or a trusted seller. Otherwise
+ * it stays in the moderation queue.
+ */
+export async function publishIfSafe(listingId: string) {
+  const l = await prisma.listing.findUniqueOrThrow({ where: { id: listingId }, select: { status: true, sellerId: true, business: { select: { verification: true } } } });
+  const risk = await scoreListing(listingId);
+  if (l.status !== "PENDING_REVIEW") return { status: l.status as string, risk };
+  if (risk.level === "LOW" && (l.business?.verification === "VERIFIED" || (await isTrustedSeller(l.sellerId)))) {
+    await prisma.listing.update({ where: { id: listingId }, data: { status: "ACTIVE", publishedAt: new Date() } });
+    void notifySavedSearches(listingId);
+    return { status: "ACTIVE", risk };
+  }
+  return { status: l.status as string, risk };
+}
+
+/** True when renewing this listing needs a paid listing fee right now. */
+export async function renewalNeedsPayment(l: { isFreeListing: boolean }) {
+  return !l.isFreeListing && listingFeesOn(await getMonetisation());
 }
 
 /**
@@ -393,11 +426,16 @@ export async function updateListing(user: SessionUser, id: string, patch: { desc
   if (!l) throw new ListingError("Not found", 404);
   const staff = user.roles.includes("ADMIN") || user.roles.includes("MODERATOR");
   if (l.sellerId !== user.id && !staff) throw new ListingError("Forbidden", 403);
+  if (patch.status === "ACTIVE" && l.status === "DRAFT" && !l.isFreeListing) throw new ListingError("Pay the listing fee to publish this listing", 402);
   if (patch.status === "ACTIVE" && !["SOLD", "ARCHIVED", "EXPIRED", "ACTIVE"].includes(l.status)) throw new ListingError("Listing must be approved first", 409);
   if (patch.status === "ACTIVE" && l.status === "ARCHIVED" && l.rejectionReason === "Removed: fraud") throw new ListingError("This listing was removed by our safety team", 403);
   if (patch.renew) {
     if (!["ACTIVE", "EXPIRED"].includes(l.status)) throw new ListingError("Only live or expired listings can be renewed", 409);
     if (l.status === "EXPIRED") patch = { ...patch, status: "ACTIVE" };
+  }
+  const extending = patch.renew || (patch.status === "ACTIVE" && l.status === "EXPIRED");
+  if (extending && !staff && (await renewalNeedsPayment(l))) {
+    throw new ListingError(`Renewing this listing for ${SITE.listingLifetimeDays} days needs the listing fee. Use "Pay & renew".`, 402);
   }
   const now = new Date();
   const renewTo = patch.renew || (patch.status === "ACTIVE" && l.status === "EXPIRED") ? new Date(now.getTime() + SITE.listingLifetimeDays * 86400_000) : undefined;
