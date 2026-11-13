@@ -15,6 +15,7 @@ import { CallButton, WhatsAppButton } from "@/components/listing/ContactButtons"
 import { InquiryForm } from "@/components/listing/InquiryForm";
 import { VerifiedMark } from "@/components/ui/VerifiedMark";
 
+import { SITE } from "@/config/site";
 type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -33,7 +34,7 @@ export default async function PartPage({ params }: { params: Params }) {
   const jsonLd = {
     "@context": "https://schema.org", "@type": "Product", name: p.title, sku: p.partNumber ?? undefined, mpn: p.oemNumber ?? p.partNumber ?? undefined,
     brand: p.brand ? { "@type": "Brand", name: p.brand } : undefined, category: p.category,
-    offers: { "@type": "Offer", price: toNum(p.priceTzs), priceCurrency: "TZS", availability: p.stockQty > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock", url },
+    offers: { "@type": "Offer", price: toNum(p.priceTzs), priceCurrency: SITE.currency, availability: p.stockQty > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock", url },
   };
   return (
     <div className="container py-6">

@@ -9,9 +9,9 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Prisma } from "../src/generated/prisma/client";
-import { TZ_REGIONS } from "../src/config/locations";
+import { REGIONS } from "../src/config/locations";
 import { VEHICLE_MAKES } from "../src/config/vehicles";
-import { PLAN_SEED, PROMOTION_SEED } from "../src/config/site";
+import { PLAN_SEED, PROMOTION_SEED, SITE } from "../src/config/site";
 import { DEFAULT_IMPORT_TAX_RULES } from "../src/config/import-tax";
 import { slugify } from "../src/lib/slug";
 
@@ -21,7 +21,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: dbUr
 
 async function seedReference() {
   console.log("→ regions & districts");
-  for (const [i, r] of TZ_REGIONS.entries()) {
+  for (const [i, r] of REGIONS.entries()) {
     const region = await prisma.region.upsert({
       where: { slug: slugify(r.name) },
       create: { name: r.name, nameSw: r.nameSw, slug: slugify(r.name), zone: r.zone, isZanzibar: !!r.isZanzibar, sortOrder: i },
@@ -70,9 +70,9 @@ async function seedReference() {
 }
 
 async function seedAdmin() {
-  const phone = process.env.SEED_ADMIN_PHONE || "+255668212595";
+  const phone = process.env.SEED_ADMIN_PHONE || SITE.supportPhone;
   const password = process.env.SEED_ADMIN_PASSWORD || "ChangeMe!2026";
-  const email = "admin@magarisoko.co.tz";
+  const email = SITE.supportEmail.replace(/^[^@]+@/, "admin@");
   console.log(`→ admin account ${phone}`);
   // If an admin already exists (e.g. created with an older number), move it to the configured number.
   const existing =
@@ -87,7 +87,7 @@ async function seedAdmin() {
   }
   return prisma.user.create({
     data: {
-      name: "MagariSOKO Tanzania Admin", phone, email, phoneVerified: new Date(),
+      name: `${SITE.name} Admin`, phone, email, phoneVerified: new Date(),
       passwordHash: await bcrypt.hash(password, 12), roles: ["ADMIN", "BUYER"],
     },
   });

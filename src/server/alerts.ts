@@ -8,6 +8,8 @@ import { buildListingWhere, toPrefixTsQuery } from "./listings";
 import { ListingError } from "./errors";
 import type { SessionUser } from "@/lib/session";
 
+import { SITE } from "@/config/site";
+import { getMonetisation, listingFeesOn } from "@/lib/settings";
 /* ═════════════════════════════ saved searches ═════════════════════════════ */
 
 /** Max alerts per saved search per day, so a busy search never floods anyone's phone. */
@@ -84,7 +86,7 @@ export async function notifySavedSearches(listingId: string) {
       if (claimed.count === 0) continue;
       const link = absoluteUrl(`/cars/${listing.slug}`);
       void notifyUser(s.userId, {
-        sms: `MagariSOKO Tanzania: New match for "${s.name.slice(0, 40)}": ${listing.title.slice(0, 50)}, ${formatTzs(listing.priceTzs)}, ${listing.region.name}. ${link}`,
+        sms: `${SITE.name}: New match for "${s.name.slice(0, 40)}": ${listing.title.slice(0, 50)}, ${formatTzs(listing.priceTzs)}, ${listing.region.name}. ${link}`,
         email: {
           subject: `New car for your search "${s.name}"`,
           lines: [`${listing.title} — ${formatTzs(listing.priceTzs)} — ${listing.region.name}.`, "It was just published and matches your saved search."],
@@ -102,8 +104,8 @@ export async function notifySavedSearches(listingId: string) {
 
 /* ═════════════════════════════ price drops ════════════════════════════════ */
 
-/** Minimum cut that triggers an alert: 2% or TSh 200,000, whichever is smaller. */
-const meaningfulDrop = (from: bigint, to: bigint) => to < from && ((from - to) * 100n >= from * 2n || from - to >= 200_000n);
+/** Minimum cut that triggers an alert: 2% or SITE.amounts.priceDropMin, whichever is smaller. */
+const meaningfulDrop = (from: bigint, to: bigint) => to < from && ((from - to) * 100n >= from * 2n || from - to >= BigInt(SITE.amounts.priceDropMin));
 
 /** Tell buyers who saved this car that its price went down. Call after a price edit or re-approval. */
 export async function notifyPriceDrops(listingId: string) {
@@ -119,7 +121,7 @@ export async function notifyPriceDrops(listingId: string) {
       if (claimed.count === 0) continue;
       const link = absoluteUrl(`/cars/${l.slug}`);
       void notifyUser(f.userId, {
-        sms: `MagariSOKO Tanzania: Price drop! ${l.title.slice(0, 50)} is now ${formatTzs(l.priceTzs)} (was ${formatTzs(f.alertPriceTzs)}). ${link}`,
+        sms: `${SITE.name}: Price drop! ${l.title.slice(0, 50)} is now ${formatTzs(l.priceTzs)} (was ${formatTzs(f.alertPriceTzs)}). ${link}`,
         email: {
           subject: `Price drop: ${l.title}`,
           lines: [`A car you saved is now cheaper: ${formatTzs(l.priceTzs)} (was ${formatTzs(f.alertPriceTzs)}).`],
@@ -144,19 +146,21 @@ export async function sendExpiryWarnings() {
   const soon = new Date(Date.now() + EXPIRY_NOTICE_DAYS * 86400_000);
   const due = await prisma.listing.findMany({
     where: { status: "ACTIVE", expiresAt: { lte: soon, gt: new Date() }, expiryNotifiedAt: null },
-    select: { id: true, title: true, expiresAt: true, seller: { select: { phone: true, email: true, status: true } } },
+    select: { id: true, title: true, expiresAt: true, isFreeListing: true, seller: { select: { phone: true, email: true, status: true } } },
     take: 500,
   });
+  const money = await getMonetisation();
   for (const l of due) {
+    const fee = !l.isFreeListing && listingFeesOn(money) ? formatTzs(money.privateListingFee) : null;
     const claimed = await prisma.listing.updateMany({ where: { id: l.id, expiryNotifiedAt: null }, data: { expiryNotifiedAt: new Date() } });
     if (claimed.count === 0 || l.seller.status !== "ACTIVE") continue;
     const days = Math.max(1, Math.ceil(((l.expiresAt?.getTime() ?? Date.now()) - Date.now()) / 86400_000));
     const link = absoluteUrl(`/dashboard/listings?renew=${l.id}`);
     void notify(l.seller, {
-      sms: `MagariSOKO Tanzania: "${l.title.slice(0, 45)}" expires in ${days} day${days > 1 ? "s" : ""}. Renew free for 60 more days: ${link}`,
+      sms: `${SITE.name}: "${l.title.slice(0, 45)}" expires in ${days} day${days > 1 ? "s" : ""}. ${fee ? `Renew for ${fee}` : "Renew free"} for ${SITE.listingLifetimeDays} more days: ${link}`,
       email: {
         subject: `Your listing expires in ${days} day${days > 1 ? "s" : ""}`,
-        lines: [`"${l.title}" will stop showing to buyers on ${l.expiresAt?.toLocaleDateString("en-GB")}.`, "Renewing is free and keeps it live for another 60 days. If the car is sold, mark it as sold instead."],
+        lines: [`"${l.title}" will stop showing to buyers on ${l.expiresAt?.toLocaleDateString("en-GB")}.`, `Renewing ${fee ? `costs ${fee}` : "is free"} and keeps it live for another ${SITE.listingLifetimeDays} days. If the car is sold, mark it as sold instead.`],
         action: { label: "Renew my listing", url: link },
       },
     });
@@ -177,7 +181,7 @@ export async function describeSearch(query: string): Promise<string> {
     [make?.name, model?.name].filter(Boolean).join(" ") || (f.q ? `"${f.q}"` : "Cars"),
     f.condition?.length ? f.condition.map((c) => ({ NEW: "brand new", FOREIGN_USED: "foreign used", LOCALLY_USED: "locally used" })[c]).join("/") : null,
     f.yearMin || f.yearMax ? `${f.yearMin ?? ""}–${f.yearMax ?? ""}` : null,
-    f.priceMax ? `up to TSh ${m(f.priceMax)}` : f.priceMin ? `from TSh ${m(f.priceMin)}` : null,
+    f.priceMax ? `up to ${SITE.currencySymbol} ${m(f.priceMax)}` : f.priceMin ? `from ${SITE.currencySymbol} ${m(f.priceMin)}` : null,
     f.mileageMax ? `≤ ${m(f.mileageMax)} km` : null,
     f.fuel?.length ? f.fuel.join("/").toLowerCase() : null,
     f.transmission?.length ? f.transmission.join("/").toLowerCase() : null,

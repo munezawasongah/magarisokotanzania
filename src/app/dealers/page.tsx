@@ -5,8 +5,9 @@ import { enumLabel } from "@/i18n";
 import { listDealers } from "@/server/businesses";
 import { Stars } from "@/components/ui/Stars";
 import { getRegionsWithDistricts } from "@/server/taxonomy";
+import { SITE } from "@/config/site";
 
-export const metadata = { title: "Car dealers & importers in Tanzania", description: "Verified car dealerships and vehicle importers in Dar es Salaam, Arusha, Mwanza, Dodoma and across Tanzania." };
+export const metadata = { title: `Car dealers & importers in ${SITE.countryName}`, description: `Verified car dealerships and vehicle importers in ${SITE.majorCities} and across ${SITE.countryName}.` };
 
 export default async function DealersPage({ searchParams }: { searchParams: Promise<{ region?: string }> }) {
   const { region } = await searchParams;

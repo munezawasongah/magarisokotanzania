@@ -3,7 +3,7 @@ import { CheckCircle2, Clock, Smartphone, XCircle } from "lucide-react";
 import { getRegistrationQueue } from "@/server/registration";
 import { approveRegistrationAction, rejectRegistrationAction } from "@/server/actions/admin";
 import { Badge } from "@/components/ui/Badge";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { formatTzs } from "@/lib/money";
 import { SITE } from "@/config/site";
 import { getMonetisation } from "@/lib/settings";
@@ -58,9 +58,9 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
                   {r.user.isShadowBanned && <Badge tone="danger">Shadow-banned user</Badge>}
                   {r.user.riskScore >= 30 && <Badge tone="plate">Risk {r.user.riskScore}</Badge>}
                 </p>
-                <p className="text-ink-700">{r.user.name} · {r.user.phone ? formatTzPhone(r.user.phone) : r.user.email}</p>
-                <p className="text-ink-500">Shop phone {formatTzPhone(r.shop.phone)} · {r.shop.address}, {r.regionName}</p>
-                {(r.shop.tin || r.shop.brelaRegNo) && <p className="text-xs">TIN <code>{r.shop.tin ?? "—"}</code> · BRELA <code>{r.shop.brelaRegNo ?? "—"}</code></p>}
+                <p className="text-ink-700">{r.user.name} · {r.user.phone ? formatPhone(r.user.phone) : r.user.email}</p>
+                <p className="text-ink-500">Shop phone {formatPhone(r.shop.phone)} · {r.shop.address}, {r.regionName}</p>
+                {(r.shop.tin || r.shop.brelaRegNo) && <p className="text-xs">{SITE.taxIdLabel} <code>{r.shop.tin ?? "—"}</code> · {SITE.companyRegLabel} <code>{r.shop.brelaRegNo ?? "—"}</code></p>}
                 {r.shop.services.length > 0 && (
                   <p className="text-xs text-ink-500">Services: {r.shop.services.map((s) => `${s.title} (${formatTzs(s.priceFromTzs)})`).join(", ")}</p>
                 )}
@@ -77,13 +77,13 @@ export default async function RegistrationsPage({ searchParams }: { searchParams
                       {paidOnline ? <CheckCircle2 className="h-4 w-4 text-go-600" /> : pay.status === "FAILED" ? <XCircle className="h-4 w-4 text-danger" /> : <Clock className="h-4 w-4 text-plate-500" />}
                       Online · {pay.provider} · <strong>{pay.status}</strong>
                     </p>
-                    <p className="text-xs text-ink-500">Amount {formatTzs(pay.amountTzs)} · from {pay.msisdn ? formatTzPhone(pay.msisdn) : "card"}</p>
+                    <p className="text-xs text-ink-500">Amount {formatTzs(pay.amountTzs)} · from {pay.msisdn ? formatPhone(pay.msisdn) : "card"}</p>
                     <p className="text-xs text-ink-500">Ref <code>{pay.reference}</code>{pay.gatewayRef ? <> · gateway <code>{pay.gatewayRef}</code></> : null}</p>
                   </>
                 ) : r.manualReference ? (
                   <>
-                    <p className="flex items-center gap-1.5"><Smartphone className="h-4 w-4 text-ink-500" />Lipa Namba · code <code className="font-bold">{r.manualReference}</code></p>
-                    <p className="text-xs text-ink-500">Paid from {r.manualMsisdn ? formatTzPhone(r.manualMsisdn) : "—"} — check your statement before approving.</p>
+                    <p className="flex items-center gap-1.5"><Smartphone className="h-4 w-4 text-ink-500" />{SITE.manualPayment.label} · code <code className="font-bold">{r.manualReference}</code></p>
+                    <p className="text-xs text-ink-500">Paid from {r.manualMsisdn ? formatPhone(r.manualMsisdn) : "—"} — check your statement before approving.</p>
                   </>
                 ) : (
                   <p className="text-xs text-ink-500">No payment yet.</p>

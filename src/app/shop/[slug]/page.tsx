@@ -11,7 +11,7 @@ import { searchParts } from "@/server/parts";
 import { listingFilterSchema, partFilterSchema, parseSearchParams } from "@/lib/validation";
 import { getCurrentUser } from "@/lib/session";
 import { whatsappLink } from "@/lib/whatsapp";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { formatTzs } from "@/lib/money";
 import { absoluteUrl } from "@/lib/utils";
 import { VehicleCard } from "@/components/listing/VehicleCard";
@@ -22,6 +22,7 @@ import { Img } from "@/components/ui/Img";
 import { WhatsAppIcon } from "@/components/ui/icons";
 import { LocationMap } from "@/components/maps/LocationMap";
 
+import { SITE } from "@/config/site";
 type Params = Promise<{ slug: string }>;
 type SP = Promise<Record<string, string | undefined>>;
 
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   if (!b) return { title: "Not found" };
   return {
     title: `${b.name} — ${b.region.name}`,
-    description: b.tagline ?? b.description?.slice(0, 160) ?? `${b.name} on MagariSOKO Tanzania`,
+    description: b.tagline ?? b.description?.slice(0, 160) ?? `${b.name} on ${SITE.name}`,
     openGraph: b.coverUrl || b.logoUrl ? { images: [b.coverUrl ?? b.logoUrl!] } : undefined,
   };
 }
@@ -67,7 +68,7 @@ export default async function MiniSitePage({ params, searchParams }: { params: P
     name: b.name, telephone: b.phone, url: absoluteUrl(`/shop/${b.slug}`), image: b.coverUrl ?? b.logoUrl ?? undefined,
     address: { "@type": "PostalAddress", streetAddress: b.address ?? undefined, addressLocality: b.district?.name ?? b.region.name, addressRegion: b.region.name, addressCountry: "TZ" },
     geo: b.latitude != null && b.longitude != null ? { "@type": "GeoCoordinates", latitude: b.latitude, longitude: b.longitude } : undefined,
-    makesOffer: b.services.map((s) => ({ "@type": "Offer", name: s.title, price: Number(s.priceFromTzs), priceCurrency: "TZS" })),
+    makesOffer: b.services.map((s) => ({ "@type": "Offer", name: s.title, price: Number(s.priceFromTzs), priceCurrency: SITE.currency })),
     aggregateRating: b.ratingCount ? { "@type": "AggregateRating", ratingValue: b.ratingAvg, reviewCount: b.ratingCount, bestRating: 5, worstRating: 1 } : undefined,
   };
 
@@ -102,8 +103,8 @@ export default async function MiniSitePage({ params, searchParams }: { params: P
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a className="btn-plate tabular-nums" href={`tel:${b.phone}`}><Phone className="h-4 w-4" />{formatTzPhone(b.phone)}</a>
-            <a className="btn-wa" target="_blank" rel="noopener noreferrer" href={whatsappLink(wa, `Habari ${b.name}, nimeona ukurasa wenu kwenye MagariSOKO Tanzania.`)}><WhatsAppIcon />WhatsApp</a>
+            <a className="btn-plate tabular-nums" href={`tel:${b.phone}`}><Phone className="h-4 w-4" />{formatPhone(b.phone)}</a>
+            <a className="btn-wa" target="_blank" rel="noopener noreferrer" href={whatsappLink(wa, `Habari ${b.name}, nimeona ukurasa wenu kwenye ${SITE.name}.`)}><WhatsAppIcon />WhatsApp</a>
           </div>
         </div>
       </section>
@@ -146,9 +147,9 @@ export default async function MiniSitePage({ params, searchParams }: { params: P
         <aside className="space-y-4">
           <div className="panel space-y-3 p-5 text-sm">
             <h2 className="font-bold">{t.contact}</h2>
-            <a href={`tel:${b.phone}`} className="flex items-center gap-2 font-semibold tabular-nums hover:underline"><Phone className="h-4 w-4 text-ink-300" />{formatTzPhone(b.phone)}</a>
+            <a href={`tel:${b.phone}`} className="flex items-center gap-2 font-semibold tabular-nums hover:underline"><Phone className="h-4 w-4 text-ink-300" />{formatPhone(b.phone)}</a>
             {b.whatsapp && b.whatsapp !== b.phone && (
-              <a href={whatsappLink(b.whatsapp, `Habari ${b.name}`)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 tabular-nums hover:underline"><WhatsAppIcon className="h-4 w-4 text-go-600" />{formatTzPhone(b.whatsapp)}</a>
+              <a href={whatsappLink(b.whatsapp, `Habari ${b.name}`)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 tabular-nums hover:underline"><WhatsAppIcon className="h-4 w-4 text-go-600" />{formatPhone(b.whatsapp)}</a>
             )}
             {b.email && <a href={`mailto:${b.email}`} className="flex items-center gap-2 break-all hover:underline"><Mail className="h-4 w-4 shrink-0 text-ink-300" />{b.email}</a>}
             {b.website && <a href={b.website} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2 break-all hover:underline"><Globe className="h-4 w-4 shrink-0 text-ink-300" />{b.website.replace(/^https?:\/\//, "")}</a>}
@@ -162,7 +163,7 @@ export default async function MiniSitePage({ params, searchParams }: { params: P
             {b.latitude != null && b.longitude != null ? (
               <LocationMap lat={b.latitude} lng={b.longitude} label={b.name} directionsLabel={t.directions} />
             ) : (
-              <a className="btn-ghost w-full py-2" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place}, Tanzania`)}`}>{t.directions}</a>
+              <a className="btn-ghost w-full py-2" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place}, ${SITE.countryName}`)}`}>{t.directions}</a>
             )}
           </div>
 

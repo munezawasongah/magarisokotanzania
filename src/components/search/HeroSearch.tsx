@@ -11,11 +11,8 @@ import { SITE } from "@/config/site";
 type MakeOpt = { id: number; name: string; slug: string; isPopular: boolean; models: Array<{ id: number; name: string; slug: string }> };
 type RegionOpt = { slug: string; name: string };
 
-/** Max-price options: 1, 1.5, 2, 3, 4, 5, 7 × the smallest price band, ×10, ×100 (TZ: 5M…300M, KE: 500K…30M). */
-const PRICE_STEPS = (() => {
-  const base = SITE.currency === "TZS" ? 5_000_000 : 500_000;
-  return [1, 2, 3, 4, 6, 8, 10, 14, 20, 30, 40, 60].map((m) => m * base);
-})();
+/** Max-price options grow from SITE.amounts.priceStepBase (TZ: 5M…300M, KE: 500K…30M). */
+const PRICE_STEPS = [1, 2, 3, 4, 6, 8, 10, 14, 20, 30, 40, 60].map((m) => m * SITE.amounts.priceStepBase);
 const stepLabel = (n: number) => `${SITE.currencySymbol} ${n >= 1e6 ? `${+(n / 1e6).toFixed(1)}M` : `${n / 1e3}K`}`;
 
 export type BandChip = { label: string; href: string; count?: number };

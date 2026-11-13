@@ -4,7 +4,7 @@ import { getDictionary } from "@/i18n/server";
 import { inspectionsForUser } from "@/server/inspections";
 import { InspectionActions } from "@/components/inspections/InspectionActions";
 import { Badge } from "@/components/ui/Badge";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { formatTzs } from "@/lib/money";
 
 export const metadata = { title: "Inspections", robots: { index: false } };
@@ -27,9 +27,9 @@ export default async function InspectionsPage() {
           <Link href={`/cars/${r.listing.slug}`} className="font-semibold hover:underline">{r.listing.title}</Link>
         </p>
         {role === "provider" ? (
-          <p className="text-ink-700">{r.buyer.name} · <a className="tabular-nums underline" href={`tel:${r.buyer.phone}`}>{r.buyer.phone ? formatTzPhone(r.buyer.phone) : "—"}</a> · seller <a className="tabular-nums underline" href={`tel:${r.listing.contactPhone}`}>{formatTzPhone(r.listing.contactPhone)}</a></p>
+          <p className="text-ink-700">{r.buyer.name} · <a className="tabular-nums underline" href={`tel:${r.buyer.phone}`}>{r.buyer.phone ? formatPhone(r.buyer.phone) : "—"}</a> · seller <a className="tabular-nums underline" href={`tel:${r.listing.contactPhone}`}>{formatPhone(r.listing.contactPhone)}</a></p>
         ) : (
-          <p className="text-ink-700">{r.provider ? <Link href={`/shop/${r.provider.slug}`} className="underline">{r.provider.name}</Link> : "—"}{r.provider?.phone ? <> · <a className="tabular-nums underline" href={`tel:${r.provider.phone}`}>{formatTzPhone(r.provider.phone)}</a></> : null}</p>
+          <p className="text-ink-700">{r.provider ? <Link href={`/shop/${r.provider.slug}`} className="underline">{r.provider.name}</Link> : "—"}{r.provider?.phone ? <> · <a className="tabular-nums underline" href={`tel:${r.provider.phone}`}>{formatPhone(r.provider.phone)}</a></> : null}</p>
         )}
         <p className="text-xs text-ink-500">
           {[r.listing.locationAddress, r.listing.region.name].filter(Boolean).join(", ")} · preferred {fmtDate(r.preferredDate)}

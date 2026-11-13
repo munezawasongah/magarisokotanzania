@@ -5,7 +5,7 @@ import { RiskBadge, RiskReasons } from "@/components/admin/RiskBadge";
 import { Img } from "@/components/ui/Img";
 import { Badge } from "@/components/ui/Badge";
 import { formatTzs } from "@/lib/money";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { timeAgo } from "@/lib/utils";
 import { RISK_THRESHOLDS } from "@/config/fraud";
 
@@ -56,7 +56,7 @@ export default async function FraudPage({ searchParams }: { searchParams: Promis
                     {l._count.reports > 0 && <Badge tone="danger">{l._count.reports} report(s)</Badge>}
                   </div>
                   <Link href={`/cars/${l.slug}`} target="_blank" className="block text-base font-semibold hover:underline">{l.title}</Link>
-                  <p><span className="plate text-sm">{formatTzs(l.priceTzs)}</span> <span className="text-xs text-ink-500">· contact {formatTzPhone(l.contactPhone)} · {timeAgo(l.createdAt)}</span></p>
+                  <p><span className="plate text-sm">{formatTzs(l.priceTzs)}</span> <span className="text-xs text-ink-500">· contact {formatPhone(l.contactPhone)} · {timeAgo(l.createdAt)}</span></p>
                   <RiskReasons reasons={l.riskReasons} />
                   <div className="rounded-md bg-paper p-3 text-xs">
                     <p className="font-semibold text-ink-900">
@@ -64,14 +64,14 @@ export default async function FraudPage({ searchParams }: { searchParams: Promis
                       {s.isShadowBanned && <Badge tone="danger" className="ml-2">on hold</Badge>}
                     </p>
                     <p className="text-ink-500">
-                      {s.phone ? formatTzPhone(s.phone) : "no phone"}{s.email ? ` · ${s.email}` : ""} · joined {timeAgo(s.createdAt)} · {s._count.listings} listings · {s._count.devices} device(s) · wallet {s.walletVerifiedAt ? "verified" : "not verified"}
+                      {s.phone ? formatPhone(s.phone) : "no phone"}{s.email ? ` · ${s.email}` : ""} · joined {timeAgo(s.createdAt)} · {s._count.listings} listings · {s._count.devices} device(s) · wallet {s.walletVerifiedAt ? "verified" : "not verified"}
                     </p>
                     {linked.length > 0 && (
                       <div className="mt-2">
                         <p className="font-semibold text-danger">Linked accounts ({linked.length})</p>
                         <ul className="mt-1 space-y-0.5">
                           {linked.slice(0, 6).map((x) => (
-                            <li key={x.id}>{x.name} · {x.phone ? formatTzPhone(x.phone) : "—"} · {x.reasons.join(", ")}{x.status !== "ACTIVE" || x.isShadowBanned ? <span className="font-semibold text-danger"> · BANNED</span> : ""}</li>
+                            <li key={x.id}>{x.name} · {x.phone ? formatPhone(x.phone) : "—"} · {x.reasons.join(", ")}{x.status !== "ACTIVE" || x.isShadowBanned ? <span className="font-semibold text-danger"> · BANNED</span> : ""}</li>
                           ))}
                         </ul>
                       </div>
@@ -115,7 +115,7 @@ export default async function FraudPage({ searchParams }: { searchParams: Promis
               <div className="min-w-0">
                 <p className="flex flex-wrap items-center gap-1.5">
                   <Badge tone={q.isHeld ? "danger" : "plate"}>{q.isHeld ? "Held" : "Delivered with warning"} · {q.riskScore}</Badge>
-                  <span className="font-semibold">{q.name}</span> <span className="text-ink-500">{formatTzPhone(q.phone)} · {timeAgo(q.createdAt)}</span>
+                  <span className="font-semibold">{q.name}</span> <span className="text-ink-500">{formatPhone(q.phone)} · {timeAgo(q.createdAt)}</span>
                 </p>
                 <p className="mt-1 text-xs text-ink-500">To: {q.listing?.title ?? q.part?.title ?? "business"}</p>
                 <p className="mt-1 whitespace-pre-line text-ink-700">{q.message}</p>
@@ -136,7 +136,7 @@ export default async function FraudPage({ searchParams }: { searchParams: Promis
             <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
               <div>
                 <p className="font-semibold">{u.name} <Badge tone="danger" className="ml-1">{u.status === "SUSPENDED" ? "Banned" : "Shadow-banned"}</Badge></p>
-                <p className="text-xs text-ink-500">{u.phone ? formatTzPhone(u.phone) : "—"}{u.email ? ` · ${u.email}` : ""} · {u._count.listings} listings · {u.bannedAt ? timeAgo(u.bannedAt) : ""}{u.banReason ? ` · ${u.banReason}` : ""}</p>
+                <p className="text-xs text-ink-500">{u.phone ? formatPhone(u.phone) : "—"}{u.email ? ` · ${u.email}` : ""} · {u._count.listings} listings · {u.bannedAt ? timeAgo(u.bannedAt) : ""}{u.banReason ? ` · ${u.banReason}` : ""}</p>
               </div>
               <form action={unbanUserAction}><input type="hidden" name="userId" value={u.id} /><button className="btn-ghost py-1.5 text-xs">Lift ban (admin)</button></form>
             </li>

@@ -16,6 +16,7 @@ export const sw: Dictionary = {
     listFree: "Weka gari lako bure", listFreeNote: "Hakuna ada ya tangazo wala kamisheni — wanunuzi wanakupigia au kukutumia WhatsApp moja kwa moja.",
     listFirstFree: "Weka gari lako — {n} ya kwanza bure", listFirstFreeNote: "Kisha {fee} kwa kila tangazo kwa siku {days}. Hakuna kamisheni kwenye mauzo.",
     budget: "Bajeti:", priceUnder: "Chini ya {amount}", priceOver: "Zaidi ya {amount}",
+    twoThreeWheelers: "Bodaboda na Bajaji",
     justListed: "Mapya sokoni", seeAll: "Ona yote {count}", byMake: "Tafuta kwa aina ya gari", byBody: "Tafuta kwa umbo la gari",
   },
   search: {

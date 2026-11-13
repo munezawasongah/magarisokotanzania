@@ -11,6 +11,7 @@ import { formatTzs, parseTzsInput } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { LegalText } from "@/components/legal/LegalText";
 import { LocationPicker } from "@/components/maps/LocationPicker";
+import { SITE } from "@/config/site";
 
 type MakeOpt = { id: number; name: string; models: Array<{ id: number; name: string; defaultBodyType: string | null }> };
 type RegionOpt = { id: number; name: string; districts: Array<{ id: number; name: string }> };
@@ -202,7 +203,7 @@ export function SellForm({ makes, regions, shop, defaultPhone }: { makes: MakeOp
               <Field label={dict.spec.doors}><input className="field" inputMode="numeric" value={v.doors} onChange={(x) => set("doors", x.target.value.replace(/\D/g, ""))} /></Field>
               <Field label={dict.spec.seats}><input className="field" inputMode="numeric" value={v.seats} onChange={(x) => set("seats", x.target.value.replace(/\D/g, ""))} /></Field>
             </div>
-            <Field label="Plate series (e.g. D, E)"><input className="field uppercase" maxLength={2} value={v.registrationSeries} onChange={(x) => set("registrationSeries", x.target.value)} /></Field>
+            <Field label={SITE.plateSeries.label}><input className="field uppercase" maxLength={SITE.plateSeries.maxLength} value={v.registrationSeries} onChange={(x) => set("registrationSeries", x.target.value)} /></Field>
             <Field label="Chassis number (private)" className="sm:col-span-2"><input className="field uppercase" value={v.chassisNumber} onChange={(x) => set("chassisNumber", x.target.value)} placeholder="Only shown to you and moderators" /></Field>
             <Field label={dict.listing.description} error={e("description")} className="sm:col-span-3">
               <textarea className="field min-h-36" value={v.description} onChange={(x) => set("description", x.target.value)} placeholder="Condition, service history, recent repairs, reason for selling…" />
@@ -248,7 +249,7 @@ export function SellForm({ makes, regions, shop, defaultPhone }: { makes: MakeOp
             <Field label={dict.inquiry.phone} error={e("contactPhone")}><input className="field" inputMode="tel" value={v.contactPhone} onChange={(x) => set("contactPhone", x.target.value)} placeholder="0712 345 678" /></Field>
             <Field label="WhatsApp (if different)" error={e("contactWhatsapp")}><input className="field" inputMode="tel" value={v.contactWhatsapp} onChange={(x) => set("contactWhatsapp", x.target.value)} placeholder="0754 000 000" /></Field>
             <Field label={isPrivate ? dict.shop.carLocation : dict.shop.address} error={e("locationAddress")} className="sm:col-span-2">
-              <input className="field" value={v.locationAddress} onChange={(x) => set("locationAddress", x.target.value)} maxLength={200} placeholder="e.g. Sinza Mori, near Shekilango Rd" />
+              <input className="field" value={v.locationAddress} onChange={(x) => set("locationAddress", x.target.value)} maxLength={200} placeholder={SITE.carLocationExample} />
             </Field>
             <div className="sm:col-span-2">
               <label className="label">{dict.shop.pin}</label>

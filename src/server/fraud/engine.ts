@@ -8,6 +8,8 @@ import {
 } from "@/config/fraud";
 import { hamming, hashImageUrl } from "./image-hash";
 
+import { SITE } from "@/config/site";
+import { formatTzsCompact } from "@/lib/money";
 export type Signal = { code: string; points: number; label: string; detail?: Record<string, unknown> };
 export type RiskResult = { score: number; level: RiskLevel; signals: Signal[]; blocked: boolean };
 
@@ -274,9 +276,9 @@ export async function scoreListing(listingId: string, opts: { edit?: EditContext
 
   // ── account age / value / wallet ──
   const ageH = (Date.now() - s.createdAt.getTime()) / 3600_000;
-  if (ageH < 24 && price >= 100_000_000) signals.push({ code: "NEW_ACCOUNT_HIGH_VALUE", points: POINTS.BRAND_NEW_ACCOUNT_VERY_HIGH, label: "Account under 24 hours old listing a vehicle over TSh 100M" });
-  else if (ageH < 72 && price >= 50_000_000) signals.push({ code: "NEW_ACCOUNT_HIGH_VALUE", points: POINTS.NEW_ACCOUNT_HIGH_VALUE, label: "Account under 3 days old listing a vehicle over TSh 50M" });
-  if (!l.businessId && !s.walletVerifiedAt && price >= 30_000_000) signals.push({ code: "NO_WALLET_HIGH_VALUE", points: POINTS.NO_WALLET_HIGH_VALUE, label: "Private seller without a mobile-money-verified wallet, price over TSh 30M" });
+  if (ageH < 24 && price >= SITE.amounts.fraudVeryHighValue) signals.push({ code: "NEW_ACCOUNT_HIGH_VALUE", points: POINTS.BRAND_NEW_ACCOUNT_VERY_HIGH, label: `Account under 24 hours old listing a vehicle over ${formatTzsCompact(SITE.amounts.fraudVeryHighValue)}` });
+  else if (ageH < 72 && price >= SITE.amounts.fraudHighValue) signals.push({ code: "NEW_ACCOUNT_HIGH_VALUE", points: POINTS.NEW_ACCOUNT_HIGH_VALUE, label: `Account under 3 days old listing a vehicle over ${formatTzsCompact(SITE.amounts.fraudHighValue)}` });
+  if (!l.businessId && !s.walletVerifiedAt && price >= SITE.amounts.fraudWalletCheckValue) signals.push({ code: "NO_WALLET_HIGH_VALUE", points: POINTS.NO_WALLET_HIGH_VALUE, label: `Private seller without a mobile-money-verified wallet, price over ${formatTzsCompact(SITE.amounts.fraudWalletCheckValue)}` });
 
   // ── community reports ──
   const reports = await prisma.listingReport.findMany({ where: { listingId: l.id, reason: "SCAM", resolved: false }, select: { reporterId: true } });
@@ -293,7 +295,7 @@ export async function scoreListing(listingId: string, opts: { edit?: EditContext
   }
 
   // ── trust credits ──
-  if (l.business?.verification === "VERIFIED") signals.push({ code: "VERIFIED_BUSINESS", points: POINTS.VERIFIED_BUSINESS, label: "Verified business (TIN/BRELA checked)" });
+  if (l.business?.verification === "VERIFIED") signals.push({ code: "VERIFIED_BUSINESS", points: POINTS.VERIFIED_BUSINESS, label: `Verified business (${SITE.taxIdLabel} checked)` });
   if (s.walletVerifiedAt) signals.push({ code: "WALLET_VERIFIED", points: POINTS.WALLET_VERIFIED, label: "Mobile-money wallet verified" });
   if (ageH > 90 * 24) {
     const history = await prisma.listing.count({ where: { sellerId: s.id, id: { not: l.id }, publishedAt: { not: null }, riskLevel: { not: "HIGH" } } });

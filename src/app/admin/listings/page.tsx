@@ -4,7 +4,7 @@ import { moderateListingAction } from "@/server/actions/admin";
 import { Img } from "@/components/ui/Img";
 import { Badge } from "@/components/ui/Badge";
 import { formatTzs } from "@/lib/money";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { RiskBadge, RiskReasons } from "@/components/admin/RiskBadge";
 
 export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -32,7 +32,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
               <p><span className="plate text-sm">{formatTzs(l.priceTzs)}</span> <span className="text-ink-500">· {l.make.name} {l.model.name} {l.year} · {l.region.name}</span></p>
               <p className="line-clamp-3 text-ink-700">{l.description}</p>
               <p className="text-xs text-ink-500">
-                Seller: {l.business ? `${l.business.name} (${l.business.verification})` : l.seller.name} · {l.seller.phone ? formatTzPhone(l.seller.phone) : "no phone"} · member since {l.seller.createdAt.toLocaleDateString("en-GB")} · {l.seller._count.listings} listings
+                Seller: {l.business ? `${l.business.name} (${l.business.verification})` : l.seller.name} · {l.seller.phone ? formatPhone(l.seller.phone) : "no phone"} · member since {l.seller.createdAt.toLocaleDateString("en-GB")} · {l.seller._count.listings} listings
               </p>
               {l.chassisNumber && <p className="text-xs">Chassis: <code>{l.chassisNumber}</code></p>}
               {l._count.reports > 0 && <Badge tone="danger">{l._count.reports} reports</Badge>}

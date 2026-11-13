@@ -6,12 +6,13 @@ import { ServiceCategory } from "@/generated/prisma/enums";
 import { searchServiceProviders } from "@/server/businesses";
 import { getRegionsWithDistricts } from "@/server/taxonomy";
 import { formatTzs } from "@/lib/money";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { whatsappLink } from "@/lib/whatsapp";
 import { WhatsAppIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Mechanics, inspection, towing & car finance in Tanzania", description: "Find verified mechanics, pre-purchase inspection centres, towing, clearing agents, insurance and car financing across Tanzania." };
+import { SITE } from "@/config/site";
+export const metadata = { title: `Mechanics, inspection, towing & car finance in ${SITE.countryName}`, description: `Find verified mechanics, pre-purchase inspection centres, towing, clearing agents, insurance and car financing across ${SITE.countryName}.` };
 
 export default async function ServicesPage({ searchParams }: { searchParams: Promise<{ category?: string; region?: string; q?: string; page?: string }> }) {
   const sp = await searchParams;
@@ -62,8 +63,8 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                 ))}
               </ul>
               <div className="mt-auto flex gap-2 pt-2">
-                <a className="btn-wa flex-1 py-2" target="_blank" rel="noopener noreferrer" href={whatsappLink(wa, `Habari ${b.name}, nimewaona kwenye MagariSOKO Tanzania. Ningependa kuuliza kuhusu huduma zenu.`)}><WhatsAppIcon />WhatsApp</a>
-                <a className="btn-ghost flex-1 py-2 tabular-nums" href={`tel:${b.phone}`}>{formatTzPhone(b.phone)}</a>
+                <a className="btn-wa flex-1 py-2" target="_blank" rel="noopener noreferrer" href={whatsappLink(wa, `Habari ${b.name}, nimewaona kwenye ${SITE.name}. Ningependa kuuliza kuhusu huduma zenu.`)}><WhatsAppIcon />WhatsApp</a>
+                <a className="btn-ghost flex-1 py-2 tabular-nums" href={`tel:${b.phone}`}>{formatPhone(b.phone)}</a>
               </div>
             </li>
           );

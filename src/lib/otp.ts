@@ -6,6 +6,7 @@ import { sendEmail } from "./email";
 import type { OtpPurpose } from "@/generated/prisma/enums";
 import { isBlocked } from "@/server/fraud/engine";
 
+import { SITE } from "@/config/site";
 const OTP_TTL_MIN = 5;
 const MAX_ATTEMPTS = 5;
 const MAX_PER_HOUR = 5;
@@ -19,7 +20,7 @@ const hash = (phone: string, code: string) =>
  * via = "email", a lower-cased email address (used for password resets on email-only accounts).
  */
 export async function issueOtp(phone: string, purpose: OtpPurpose = "LOGIN", ipHash?: string, via: "sms" | "email" = "sms") {
-  if (await isBlocked(via === "email" ? "EMAIL" : "PHONE", phone)) return { ok: false as const, error: "This number cannot be used on MagariSOKO Tanzania. Contact support if you think this is a mistake." };
+  if (await isBlocked(via === "email" ? "EMAIL" : "PHONE", phone)) return { ok: false as const, error: `This number cannot be used on ${SITE.name}. Contact support if you think this is a mistake.` };
   const since = new Date(Date.now() - 60 * 60 * 1000);
   const recent = await prisma.otpCode.findMany({ where: { phone, purpose, createdAt: { gte: since } }, orderBy: { createdAt: "desc" } });
   if (recent.length >= MAX_PER_HOUR) return { ok: false as const, error: "Too many codes requested. Try again in an hour." };
@@ -36,9 +37,9 @@ export async function issueOtp(phone: string, purpose: OtpPurpose = "LOGIN", ipH
     ? await sendEmail({
         to: phone,
         subject: purpose === "RESET_PASSWORD" ? "Your password reset code" : "Your verification code",
-        lines: [`Your MagariSOKO Tanzania ${what} is ${code}.`, `It expires in ${OTP_TTL_MIN} minutes. Never share it with anyone — our staff will never ask for it.`, "If you did not request this, you can ignore this email."],
+        lines: [`Your ${SITE.name} ${what} is ${code}.`, `It expires in ${OTP_TTL_MIN} minutes. Never share it with anyone — our staff will never ask for it.`, "If you did not request this, you can ignore this email."],
       })
-    : await sendSms(phone, `MagariSOKO Tanzania: your ${what} is ${code}. It expires in ${OTP_TTL_MIN} minutes. Usimpe mtu yeyote namba hii.`);
+    : await sendSms(phone, `${SITE.name}: your ${what} is ${code}. It expires in ${OTP_TTL_MIN} minutes. Usimpe mtu yeyote namba hii.`);
   if (!sent.ok) return { ok: false as const, error: via === "email" ? "Could not send the email. Please try again." : "Could not send SMS. Please try again." };
   const consoleDriver = via === "email" ? (process.env.EMAIL_DRIVER || "console") === "console" : process.env.SMS_DRIVER === "console";
   return { ok: true as const, devCode: consoleDriver && process.env.NODE_ENV !== "production" ? code : undefined };

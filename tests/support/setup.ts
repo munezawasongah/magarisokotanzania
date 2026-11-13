@@ -10,6 +10,7 @@ process.env.CRON_SECRET ||= "test-cron";
 delete process.env.AZAMPAY_CLIENT_ID;
 delete process.env.SELCOM_API_KEY;
 delete process.env.DPO_COMPANY_TOKEN;
+delete process.env.DARAJA_CONSUMER_KEY;
 
 // Quiet the console drivers so test output stays readable.
 vi.spyOn(console, "info").mockImplementation(() => undefined);

@@ -26,13 +26,21 @@ No demo or sample listings are created. Databases that were seeded with the old 
 
 With `SMS_DRIVER="console"`, OTP codes print in the terminal and show on the login screen in development. With no payment gateway configured, development uses a **mock gateway**: a payment succeeds about 4 seconds after you start it.
 
-### Seller registration and mini-sites
+### Seller registration, mini-sites and pricing
 
-1. Anyone can sign up as a buyer. To sell, a user opens **Dashboard → Register as a seller** (`/dashboard/registration`) and chooses: private seller, car dealership, car yard, importer, spare-parts shop or garage / service provider.
+1. Anyone can sign up as a buyer. To sell, a user opens **Dashboard → Register as a seller** (`/dashboard/registration`), or taps **List your car free** on the home page, and chooses: private seller, car dealership, car yard, importer, spare-parts shop or garage / service provider.
 2. They fill in their mini-site details: name, phone, WhatsApp, email, region, district, physical address, a map pin (shop, dealership, garage — or where a private seller's car can be seen), opening hours, logo, cover photo and — for service providers — each service with its price.
-3. They pay the **TSh 30,000** registration fee online (M-Pesa, Mixx by Yas, Airtel Money, HaloPesa, AzamPesa, card) or to your Lipa Namba, then enter the transaction code. Set `NEXT_PUBLIC_LIPA_NAMBA`, `NEXT_PUBLIC_LIPA_NAME` and `NEXT_PUBLIC_LIPA_NETWORK` in `.env` to offer the Lipa Namba option.
-4. The admin checks the payment in **Admin → Registrations** and approves or rejects it. Online payments can only be approved once the gateway has confirmed them; Lipa Namba codes are matched by hand against the statement, and a code can only be used once.
-5. On approval the registration is marked successful, the seller role is granted, the mini-site is created at `/shop/<name>` and the seller gets an SMS with the link. Only then can they post cars, parts or services.
+3. **Private sellers always sign up free**, and so does everyone while the business sign-up fee is 0 (the default): the mini-site goes live at `/shop/<name>` the moment the details are saved, the seller role is granted and an SMS goes out. Private sellers go straight on to post their car.
+4. If you set a business sign-up fee (Admin → Pricing & fees), businesses pay it online (M-Pesa, Mixx by Yas, Airtel Money, HaloPesa, AzamPesa, card) or to your Lipa Namba (`NEXT_PUBLIC_LIPA_NAMBA`), and the admin approves it in **Admin → Registrations**, exactly as before.
+
+**Pricing & fees (Admin → Pricing & fees, no redeploy):**
+
+| Phase | Private sellers | Businesses |
+|---|---|---|
+| **Launch** (default) | Every listing free; renewals free | Unlimited listings free; plans optional |
+| **Paid** | First 2 listings free, then **TSh 10,000** per listing for 60 days; listings made free renew free | A small free allowance without a plan (default 3 live listings); monthly plans for more |
+
+Featured / Bump boosts and monthly plans can be bought in either phase. There is never a commission on a sale. In the paid phase an unpaid listing is saved as a draft and goes live after its fee is paid (and it passes the fraud check); renewing a paid listing asks for the fee again.
 
 Every car, part and service must have a price — the forms require it, the server rejects a missing price, and the database refuses a price of zero. The search box in the header and on the home page (`/search`) looks across cars, spare parts, services and shops at once, and every result shows its price and the seller's phone and WhatsApp.
 
@@ -64,7 +72,7 @@ npm test                  # everything (needs PostgreSQL running)
 npm run test:unit         # business rules only, no database
 ```
 
-The integration test creates its own database, `garisoko_test`, applies every migration and runs the money flow end to end: registration → TSh 30,000 payment (and duplicate callbacks) → admin approval → mini-site → listing (price and mileage enforced, zero price refused by the database) → publish → saved-search alert → price-drop alert (sent once even when triggered twice at the same moment) → expiry reminder and renew → spare parts → inspection booking → reviews → password reset → revenue report. Your real database is never touched. Run `npm test` before every deployment.
+The integration test creates its own database, `garisoko_test`, applies every migration and runs the money flow end to end: business sign-up fee → payment (and duplicate callbacks) → admin approval → mini-site → listing (price and mileage enforced, zero price refused by the database) → publish → saved-search alert → price-drop alert (sent once even when triggered twice at the same moment) → expiry reminder and renew → spare parts → inspection booking → reviews → password reset → revenue report → the pricing model (free launch, first listings free, paid draft, listing-fee payment, paid renewal, business allowance). Your real database is never touched. Run `npm test` before every deployment.
 
 ### Changing the schema
 

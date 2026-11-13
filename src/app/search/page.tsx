@@ -10,11 +10,12 @@ import { PartCard } from "@/components/parts/PartCard";
 import { Pagination } from "@/components/ui/Pagination";
 import { WhatsAppIcon } from "@/components/ui/icons";
 import { formatTzs } from "@/lib/money";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { whatsappLink } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import { Stars } from "@/components/ui/Stars";
 
+import { SITE } from "@/config/site";
 type SP = Promise<{ q?: string; region?: string; scope?: string; page?: string }>;
 const SCOPES = ["all", "cars", "parts", "services", "shops"] as const;
 type Scope = (typeof SCOPES)[number];
@@ -105,8 +106,8 @@ export default async function SearchPage({ searchParams }: { searchParams: SP })
                   </div>
                   <span className="plate w-fit text-sm">{t.from} {formatTzs(s.priceFromTzs)}</span>
                   <div className="flex gap-2">
-                    <a href={`tel:${b.phone}`} className="btn-ghost px-3 py-2 text-xs tabular-nums"><Phone className="h-4 w-4" />{formatTzPhone(b.phone)}</a>
-                    <a href={whatsappLink(b.whatsapp ?? b.phone, `Habari ${b.name}, naomba maelezo kuhusu: ${s.title} (MagariSOKO Tanzania)`)} target="_blank" rel="noopener noreferrer" className="btn-wa px-3 py-2" aria-label={dict.listing.whatsapp}><WhatsAppIcon className="h-4 w-4" /></a>
+                    <a href={`tel:${b.phone}`} className="btn-ghost px-3 py-2 text-xs tabular-nums"><Phone className="h-4 w-4" />{formatPhone(b.phone)}</a>
+                    <a href={whatsappLink(b.whatsapp ?? b.phone, `Habari ${b.name}, naomba maelezo kuhusu: ${s.title} (${SITE.name})`)} target="_blank" rel="noopener noreferrer" className="btn-wa px-3 py-2" aria-label={dict.listing.whatsapp}><WhatsAppIcon className="h-4 w-4" /></a>
                   </div>
                 </li>
               );
@@ -127,8 +128,8 @@ export default async function SearchPage({ searchParams }: { searchParams: SP })
                 <p className="flex items-center gap-1 text-xs text-ink-700"><MapPin className="h-3.5 w-3.5 text-ink-300" />{[b.address, b.region.name].filter(Boolean).join(", ")}</p>
                 <p className="text-xs text-ink-500">{b._count.listings} {dict.nav.cars.toLowerCase()} · {b._count.parts} {dict.nav.parts.toLowerCase()} · {b._count.services} {dict.nav.services.toLowerCase()}</p>
                 <div className="mt-auto flex gap-2 pt-1">
-                  <a href={`tel:${b.phone}`} className="btn-ghost flex-1 justify-center px-3 py-2 text-xs tabular-nums"><Phone className="h-4 w-4" />{formatTzPhone(b.phone)}</a>
-                  <a href={whatsappLink(b.whatsapp ?? b.phone, `Habari ${b.name} (MagariSOKO Tanzania)`)} target="_blank" rel="noopener noreferrer" className="btn-wa px-3 py-2" aria-label={dict.listing.whatsapp}><WhatsAppIcon className="h-4 w-4" /></a>
+                  <a href={`tel:${b.phone}`} className="btn-ghost flex-1 justify-center px-3 py-2 text-xs tabular-nums"><Phone className="h-4 w-4" />{formatPhone(b.phone)}</a>
+                  <a href={whatsappLink(b.whatsapp ?? b.phone, `Habari ${b.name} (${SITE.name})`)} target="_blank" rel="noopener noreferrer" className="btn-wa px-3 py-2" aria-label={dict.listing.whatsapp}><WhatsAppIcon className="h-4 w-4" /></a>
                 </div>
               </li>
             ))}

@@ -19,7 +19,7 @@ export type InitiateResult =
 export type VerifyResult = { status: "SUCCESS" | "FAILED" | "PENDING"; gatewayRef?: string; amountTzs?: number; raw?: unknown };
 
 export interface PaymentGatewayAdapter {
-  readonly name: "AZAMPAY" | "SELCOM" | "DPO" | "MANUAL";
+  readonly name: "AZAMPAY" | "SELCOM" | "DPO" | "DARAJA" | "MANUAL";
   isConfigured(): boolean;
   supports(provider: PaymentProvider): boolean;
   initiate(p: InitiateParams): Promise<InitiateResult>;

@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { verifyOtp } from "./otp";
-import { normalizeTzPhone } from "./phone";
+import { normalizePhone } from "./phone";
 import type { Role } from "@/generated/prisma/enums";
 import { SITE } from "@/config/site";
 import { deviceHashFromCookieHeader } from "./device";
@@ -43,7 +43,7 @@ export const authOptions: NextAuthOptions = {
       name: "Phone",
       credentials: { phone: { type: "text" }, code: { type: "text" }, name: { type: "text" } },
       async authorize(creds, req) {
-        const phone = normalizeTzPhone(creds?.phone);
+        const phone = normalizePhone(creds?.phone);
         const code = String(creds?.code ?? "");
         if (!phone || !/^\d{6}$/.test(code)) return null;
         if (await isBlocked("PHONE", phone)) return null;
@@ -52,7 +52,7 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.upsert({
           where: { phone },
           // OTP sign-up screen states that continuing means accepting the Terms + Privacy Policy
-          create: { phone, name: creds?.name?.trim() || "MagariSOKO user", phoneVerified: new Date(), lastLoginAt: new Date(), termsAcceptedAt: new Date(), termsVersion: SITE.legalUpdated },
+          create: { phone, name: creds?.name?.trim() || `${SITE.shortName} user`, phoneVerified: new Date(), lastLoginAt: new Date(), termsAcceptedAt: new Date(), termsVersion: SITE.legalUpdated },
           update: { phoneVerified: new Date(), lastLoginAt: new Date() },
         });
         if (user.status !== "ACTIVE") return null;
@@ -68,7 +68,7 @@ export const authOptions: NextAuthOptions = {
         const id = String(creds?.identifier ?? "").trim().toLowerCase();
         const password = String(creds?.password ?? "");
         if (!id || !password) return null;
-        const phone = normalizeTzPhone(id);
+        const phone = normalizePhone(id);
         const user = await prisma.user.findFirst({ where: phone ? { phone } : { email: id } });
         if (!user?.passwordHash || user.status !== "ACTIVE") return null;
         if (!(await bcrypt.compare(password, user.passwordHash))) return null;

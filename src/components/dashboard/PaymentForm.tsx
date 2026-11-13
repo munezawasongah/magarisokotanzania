@@ -3,14 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, LoaderCircle, XCircle } from "lucide-react";
 import { useI18n } from "@/i18n/client";
 import { enumLabel } from "@/i18n";
-import { detectNetwork, normalizeTzPhone } from "@/lib/phone";
+import { detectNetwork, normalizePhone } from "@/lib/phone";
 import { formatTzs } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { PAYMENT_METHODS, type PayProvider } from "@/config/payments";
 
-type Provider = "MPESA" | "TIGO_PESA" | "AIRTEL_MONEY" | "HALOPESA" | "AZAMPESA" | "CARD";
-const PROVIDERS: Provider[] = ["MPESA", "TIGO_PESA", "AIRTEL_MONEY", "HALOPESA", "AZAMPESA", "CARD"];
-const NETWORK_TO_PROVIDER: Record<string, Provider> = { VODACOM: "MPESA", YAS: "TIGO_PESA", AIRTEL: "AIRTEL_MONEY", HALOTEL: "HALOPESA" };
-const SWATCH: Record<Provider, string> = { MPESA: "bg-[#E60000]", TIGO_PESA: "bg-[#00377B]", AIRTEL_MONEY: "bg-[#ED1C24]", HALOPESA: "bg-[#F58220]", AZAMPESA: "bg-[#0B6E4F]", CARD: "bg-ink-900" };
+type Provider = PayProvider;
+const PROVIDERS = PAYMENT_METHODS.providers;
+const NETWORK_TO_PROVIDER = PAYMENT_METHODS.networkToProvider;
+const SWATCH = PAYMENT_METHODS.swatch;
 
 export type PayItem = { code: string; name: string; priceTzs: number; note?: string };
 
@@ -25,7 +26,7 @@ export function PaymentForm({ purpose, items, listingId, businessId, defaultPhon
   const { dict } = useI18n();
   const [code, setCode] = useState(items[0]?.code ?? "");
   const [phone, setPhone] = useState(defaultPhone ?? "");
-  const [provider, setProvider] = useState<Provider>(() => NETWORK_TO_PROVIDER[detectNetwork(defaultPhone ?? "")] ?? "MPESA");
+  const [provider, setProvider] = useState<Provider>(() => NETWORK_TO_PROVIDER[detectNetwork(defaultPhone ?? "")] ?? PROVIDERS[0]);
   const [state, setState] = useState<"idle" | "sending" | "pending" | "success" | "failed">("idle");
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -35,7 +36,7 @@ export function PaymentForm({ purpose, items, listingId, businessId, defaultPhon
 
   function onPhone(val: string) {
     setPhone(val);
-    const n = normalizeTzPhone(val);
+    const n = normalizePhone(val);
     const p = n ? NETWORK_TO_PROVIDER[detectNetwork(n)] : undefined;
     if (p && provider !== "CARD") setProvider(p);
   }
@@ -105,7 +106,7 @@ export function PaymentForm({ purpose, items, listingId, businessId, defaultPhon
       {provider !== "CARD" && (
         <div>
           <label className="label" htmlFor="pay-phone">{dict.dash.payPhone}</label>
-          <input id="pay-phone" className="field" inputMode="tel" value={phone} onChange={(e) => onPhone(e.target.value)} placeholder="0754 123 456" required />
+          <input id="pay-phone" className="field" inputMode="tel" value={phone} onChange={(e) => onPhone(e.target.value)} placeholder={PAYMENT_METHODS.phonePlaceholder} required />
         </div>
       )}
 

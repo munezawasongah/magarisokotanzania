@@ -10,9 +10,10 @@ import { ListingError, publishIfSafe } from "../listings";
 import { getMonetisation } from "@/lib/settings";
 import { SITE } from "@/config/site";
 import type { InitiateResult, PaymentGatewayAdapter } from "./types";
-import { azampay } from "./azampay";
 import { selcom } from "./selcom";
 import { dpo } from "./dpo";
+import { daraja } from "./daraja";
+import { GATEWAYS } from "./routing";
 import { isBlocked, markWalletVerified } from "../fraud/engine";
 import { markRegistrationPaid, planBusinessType } from "../registration";
 import { notifyUser } from "@/lib/notify";
@@ -33,9 +34,9 @@ const mock: PaymentGatewayAdapter = {
   },
 };
 
-/** Gateway routing: mobile money → AzamPay (fallback Selcom); cards → DPO (fallback Selcom). */
+/** Gateway routing per country: see ./routing.ts. */
 function pickGateway(provider: PaymentProvider): PaymentGatewayAdapter {
-  const order = provider === "CARD" ? [dpo, selcom] : [azampay, selcom];
+  const order = [...(provider === "CARD" ? GATEWAYS.card : GATEWAYS.mobile)];
   const preferred = provider === "CARD" ? process.env.PAYMENTS_CARD_GATEWAY : process.env.PAYMENTS_MNO_GATEWAY;
   if (preferred) order.sort((a) => (a.name.toLowerCase() === preferred.toLowerCase() ? -1 : 1));
   const gw = order.find((g) => g.isConfigured() && g.supports(provider));
@@ -118,7 +119,8 @@ export async function initiatePayment(user: SessionUser, input: PaymentInitInput
     },
   });
 
-  const token = process.env.AZAMPAY_CALLBACK_TOKEN ? `?token=${process.env.AZAMPAY_CALLBACK_TOKEN}` : "";
+  const tokenEnv = gateway.name === "AZAMPAY" ? process.env.AZAMPAY_CALLBACK_TOKEN : gateway.name === "DARAJA" ? process.env.DARAJA_CALLBACK_TOKEN : undefined;
+  const token = tokenEnv ? `?token=${tokenEnv}` : "";
   const result = await gateway.initiate({
     reference,
     amountTzs: Number(charge.amountTzs),
@@ -126,7 +128,7 @@ export async function initiatePayment(user: SessionUser, input: PaymentInitInput
     msisdn: input.msisdn,
     description: charge.description,
     buyer: { name: dbUser.name, email: dbUser.email, phone: dbUser.phone },
-    callbackUrl: absoluteUrl(`/api/payments/callback/${gateway.name.toLowerCase()}${gateway.name === "AZAMPAY" ? token : ""}`),
+    callbackUrl: absoluteUrl(`/api/payments/callback/${gateway.name.toLowerCase()}${token}`),
     returnUrl: absoluteUrl(`/api/payments/return?ref=${reference}`),
     cancelUrl: absoluteUrl(`/dashboard/payments/${payment.id}?cancelled=1`),
   });
@@ -255,6 +257,12 @@ export async function getPaymentStatus(user: SessionUser, paymentId: string) {
       const v = await selcom.verify(p.reference).catch(() => null);
       if (v?.status === "SUCCESS") await fulfillPayment(p.id, { gatewayRef: v.gatewayRef, raw: v.raw, paidAmountTzs: v.amountTzs });
       else if (v?.status === "FAILED") await failPayment(p.id, "Declined at Selcom", v.raw);
+    } else if (p.gateway === "DARAJA" && p.gatewayRef && ageMs > 20000) {
+      // the STK callback normally arrives first; this covers a lost callback
+      const v = await daraja.verify(p.gatewayRef).catch(() => null);
+      if (v?.status === "SUCCESS") await fulfillPayment(p.id, { raw: v.raw });
+      else if (v?.status === "FAILED") await failPayment(p.id, "M-Pesa payment was cancelled or failed", v.raw);
+      else if (ageMs > 10 * 60_000) await failPayment(p.id, "Timed out waiting for M-Pesa");
     } else if (p.gateway === "DPO" && p.gatewayRef && ageMs > 15000) {
       const v = await dpo.verify(p.gatewayRef).catch(() => null);
       if (v?.status === "SUCCESS") await fulfillPayment(p.id, { raw: v.raw, paidAmountTzs: v.amountTzs });
@@ -267,7 +275,7 @@ export async function getPaymentStatus(user: SessionUser, paymentId: string) {
   return fresh;
 }
 
-export { selcom, dpo };
+export { selcom, dpo, daraja };
 
 const RECEIPT_FOR: Record<string, string> = {
   REGISTRATION_FEE: "Seller registration fee", PROMOTION: "Listing promotion", SUBSCRIPTION: "Monthly plan",

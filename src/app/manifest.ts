@@ -4,7 +4,7 @@ import { SITE } from "@/config/site";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: SITE.fullName,
-    short_name: "MagariSOKO",
+    short_name: SITE.shortName,
     description: SITE.taglineEn,
     start_url: "/",
     display: "standalone",

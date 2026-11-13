@@ -17,6 +17,9 @@ export const SITE = {
   safetyEmail: "safety@magarisoko.co.tz",
   /** Date shown as "Last updated" on the legal pages (ISO) */
   legalUpdated: "2026-11-11",
+  /** Short name for the phone home screen, and the slug for upload folders and export files */
+  shortName: "MagariSOKO",
+  slug: "magarisoko",
   country: "TZ",
   countryName: "Tanzania",
   currency: "TZS",
@@ -27,11 +30,40 @@ export const SITE = {
   /** Country calling code without "+" */
   dialCode: "255",
   flag: "🇹🇿",
+  countryAdjective: "Tanzanian",
+  /** Used in page descriptions */
+  majorCities: "Dar es Salaam, Arusha, Mwanza, Dodoma",
+  partsHub: "Kariakoo",
+  addressExample: "e.g. Mikocheni B, near Shoppers Plaza",
+  carLocationExample: "e.g. Sinza Mori, near Shekilango Rd",
+  phoneExample: "0712 345 678",
+  /** Country-sized money thresholds (whole shillings) used by validation, alerts and fraud scoring */
+  amounts: {
+    vehicleMin: 100_000,
+    partMin: 500,
+    serviceMin: 1_000,
+    /** price-drop alert fires on a cut of 2 % or this amount, whichever is smaller */
+    priceDropMin: 200_000,
+    /** new accounts listing above these are scored as riskier */
+    fraudVeryHighValue: 100_000_000,
+    fraudHighValue: 50_000_000,
+    /** private sellers above this without a verified mobile-money wallet are scored as riskier */
+    fraudWalletCheckValue: 30_000_000,
+    /** USD rate fallback and sanity floor for the exchange-rate feed */
+    fxFallbackPerUsd: 2600,
+    fxSanityMin: 500,
+    /** smallest "max price" option in the car search; the list grows from it (×1 … ×60) */
+    priceStepBase: 5_000_000,
+  },
   /** Labels for the business registration numbers stored on a mini-site (columns tin / brelaRegNo) */
   taxIdLabel: "TIN (TRA)",
   companyRegLabel: "BRELA registration no.",
   /** Where the admin checks those numbers */
   taxIdCheck: "the TIN on the TRA portal and the registration on BRELA ORS",
+  /** Tax authority named in the import-cost and settings screens */
+  taxAuthority: "TRA",
+  /** Number-plate series field on the sell form: the series hints at when a car was first registered */
+  plateSeries: { label: "Plate series (e.g. D, E)", maxLength: 2 },
   /** Live listings a private seller may have at once (anti-dealer-in-disguise cap) */
   baseActiveListings: 20,
   /**
@@ -50,7 +82,6 @@ export const SITE = {
   pageSize: 24,
 } as const;
 
-/** Monthly subscription plans per business type (seeded into `Plan`). */
 /**
  * How the marketplace charges. These are the defaults; the admin changes them at
  * Admin → Pricing & fees without a redeploy (stored in SiteSetting "monetisation").
@@ -80,6 +111,7 @@ export const PRICE_BANDS: ReadonlyArray<{ min?: number; max?: number }> = [
   { min: 50_000_000 },
 ];
 
+/** Monthly subscription plans per business type (seeded into `Plan`). */
 export const PLAN_SEED = [
   { code: "DEALER_STARTER", name: "Dealer Starter", businessType: "DEALERSHIP", priceTzsMonthly: 150_000, priceTzsYearly: 1_500_000, maxActiveListings: 25, featuredCredits: 2, leadAnalytics: false, verifiedBadge: false, sortOrder: 1 },
   { code: "DEALER_PRO", name: "Dealer Pro", businessType: "DEALERSHIP", priceTzsMonthly: 350_000, priceTzsYearly: 3_500_000, maxActiveListings: 100, featuredCredits: 8, leadAnalytics: true, verifiedBadge: true, sortOrder: 2 },

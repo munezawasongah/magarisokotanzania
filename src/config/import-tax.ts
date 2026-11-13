@@ -20,6 +20,8 @@ export type ImportTaxRules = {
   ageExcise: Array<{ minAgeYears: number; maxAgeYears: number | null; pct: number }>;
   /** Electric vehicles: engine-capacity excise does not apply. */
   evExemptFromEngineExcise: boolean;
+  /** Oldest vehicle (years) that may be imported; null = no limit. Older cars get a warning line. */
+  maxImportAgeYears: number | null;
   /** Flat local costs in TZS */
   registrationTzs: number;
   portAndShippingLineTzs: number;
@@ -43,8 +45,20 @@ export const DEFAULT_IMPORT_TAX_RULES: ImportTaxRules = {
     { minAgeYears: 20, maxAgeYears: null, pct: 40 },
   ],
   evExemptFromEngineExcise: true,
+  maxImportAgeYears: null,
   registrationTzs: 500_000,
   portAndShippingLineTzs: 900_000,
   clearingAgentTzs: 700_000,
   updatedNote: "Finance Act 2026 age-based excise (effective 1 July 2026). Verify with TRA before quoting.",
 };
+
+/** Names of the levies and local costs on the landed-cost breakdown (English / Kiswahili). */
+export const LEVY_LABELS = {
+  railwayLevy: ["Railway development levy", "Tozo ya reli"],
+  processingFee: ["Customs processing fee", "Ada ya uchakataji forodha"],
+  registration: ["TRA registration & plates", "Usajili wa TRA na namba"],
+  ageExcise: ["Excise duty – age", "Ushuru wa umri"],
+} as const;
+
+/** Typical bank / asset-finance vehicle loan, used for "from … / month" estimates. */
+export const LOAN_DEFAULTS = { depositPct: 30, ratePct: 17, months: 36, roundTo: 1_000 } as const;

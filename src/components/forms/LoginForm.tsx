@@ -6,6 +6,7 @@ import { useI18n } from "@/i18n/client";
 import { fmt } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { LegalText } from "@/components/legal/LegalText";
+import { SITE } from "@/config/site";
 
 /** Phone + SMS OTP (default, East-Africa-first) or email/phone + password. */
 export function LoginForm() {
@@ -70,7 +71,7 @@ export function LoginForm() {
           <div>
             <label className="label" htmlFor="phone">{dict.auth.phone}</label>
             <div className="flex">
-              <span className="inline-flex items-center rounded-l-md border border-r-0 border-line bg-ink-100 px-3 text-sm text-ink-700">🇹🇿 +255</span>
+              <span className="inline-flex items-center rounded-l-md border border-r-0 border-line bg-ink-100 px-3 text-sm text-ink-700">{SITE.flag} +{SITE.dialCode}</span>
               <input id="phone" className="field rounded-l-none" inputMode="tel" autoComplete="tel" placeholder="712 345 678" value={phone} onChange={(e) => setPhone(e.target.value)} required />
             </div>
           </div>

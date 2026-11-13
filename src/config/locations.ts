@@ -11,7 +11,7 @@ export type RegionSeed = {
   districts: string[];
 };
 
-export const TZ_REGIONS: RegionSeed[] = [
+export const REGIONS: RegionSeed[] = [
   { name: "Dar es Salaam", zone: "Coastal", districts: ["Kinondoni", "Ilala", "Temeke", "Ubungo", "Kigamboni"] },
   { name: "Arusha", zone: "Northern", districts: ["Arusha City", "Arusha Rural", "Meru", "Karatu", "Monduli", "Longido", "Ngorongoro"] },
   { name: "Mwanza", zone: "Lake", districts: ["Nyamagana", "Ilemela", "Buchosa", "Kwimba", "Magu", "Misungwi", "Sengerema", "Ukerewe"] },
@@ -44,3 +44,6 @@ export const TZ_REGIONS: RegionSeed[] = [
   { name: "Songwe", zone: "Southern Highlands", districts: ["Mbozi", "Tunduma", "Ileje", "Momba", "Songwe"] },
   { name: "Tabora", zone: "Western", districts: ["Tabora Municipal", "Igunga", "Kaliua", "Nzega", "Sikonge", "Urambo", "Uyui"] },
 ];
+
+/** @deprecated use REGIONS */
+export const TZ_REGIONS = REGIONS;

@@ -2,7 +2,7 @@
 import { Phone } from "lucide-react";
 import { WhatsAppIcon } from "@/components/ui/icons";
 import { whatsappLink } from "@/lib/whatsapp";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
 function track(listingId: string | undefined, type: "WHATSAPP_CLICK" | "CALL_CLICK") {
@@ -36,9 +36,9 @@ export function CallButton({ phone, listingId, label, className, compact }: { ph
       href={`tel:${phone}`}
       onClick={(e) => { e.stopPropagation(); track(listingId, "CALL_CLICK"); }}
       className={cn("btn-ghost whitespace-nowrap tabular-nums", compact && "gap-1.5 px-2.5 py-2", className)}
-      aria-label={`${label} ${formatTzPhone(phone)}`}
+      aria-label={`${label} ${formatPhone(phone)}`}
     >
-      <Phone className="h-4 w-4 shrink-0" /> <span>{formatTzPhone(phone)}</span>
+      <Phone className="h-4 w-4 shrink-0" /> <span>{formatPhone(phone)}</span>
     </a>
   );
 }

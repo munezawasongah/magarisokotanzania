@@ -9,6 +9,7 @@ import { PartFilters } from "@/components/parts/PartFilters";
 import { KeywordBox } from "@/components/search/KeywordBox";
 import { SortSelect } from "@/components/search/SortSelect";
 import { Pagination } from "@/components/ui/Pagination";
+import { SITE } from "@/config/site";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
@@ -18,7 +19,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
   const make = makes.find((m) => m.slug === f.make);
   const model = make?.models.find((m) => m.slug === f.model);
   const veh = [make?.name, model?.name].filter(Boolean).join(" ");
-  return { title: veh ? `${veh} spare parts in Tanzania` : "Car spare parts in Tanzania", description: `Genuine, OEM and ex-Japan ${veh ? veh + " " : ""}spare parts with fitment check. Prices in TZS from verified vendors in Kariakoo and across Tanzania.` };
+  return { title: veh ? `${veh} spare parts in ${SITE.countryName}` : `Car spare parts in ${SITE.countryName}`, description: `Genuine, OEM and ex-Japan ${veh ? veh + " " : ""}spare parts with fitment check. Prices in ${SITE.currency} from verified vendors in ${SITE.partsHub} and across ${SITE.countryName}.` };
 }
 
 export default async function PartsPage({ searchParams }: { searchParams: SP }) {

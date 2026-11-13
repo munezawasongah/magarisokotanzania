@@ -5,7 +5,7 @@ import { Phone } from "lucide-react";
 import { WhatsAppIcon } from "@/components/ui/icons";
 import { useI18n } from "@/i18n/client";
 import { enumLabel } from "@/i18n";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { formatTzs } from "@/lib/money";
 import { whatsappLink } from "@/lib/whatsapp";
 import { timeAgo, cn } from "@/lib/utils";
@@ -78,7 +78,7 @@ export function LeadsInbox({ leads, me }: { leads: Lead[]; me: string }) {
             </div>
             <div className="flex gap-2">
               <a className="btn-wa py-2" target="_blank" rel="noopener noreferrer" href={whatsappLink(open.phone, `Habari ${open.name}, asante kwa kuwasiliana kuhusu ${open.listing?.title ?? open.part?.title ?? ""}.`)}><WhatsAppIcon /> WhatsApp</a>
-              <a className="btn-ghost py-2 tabular-nums" href={`tel:${open.phone}`}><Phone className="h-4 w-4" />{formatTzPhone(open.phone)}</a>
+              <a className="btn-ghost py-2 tabular-nums" href={`tel:${open.phone}`}><Phone className="h-4 w-4" />{formatPhone(open.phone)}</a>
             </div>
           </div>
           {open.sellerNote?.startsWith("⚠") && (

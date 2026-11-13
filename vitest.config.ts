@@ -4,7 +4,7 @@ import { defineConfig } from "vitest/config";
 /**
  *   npm test                  → unit + integration (needs PostgreSQL running)
  *   npm run test:unit         → pure logic only (no database)
- *   npm run test:integration  → the money flow against a throw-away database "garisoko_test"
+ *   npm run test:integration  → the money flow against its own throw-away test database (see tests/support/db-url.ts)
  */
 export default defineConfig({
   resolve: {

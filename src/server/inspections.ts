@@ -2,11 +2,12 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { notify, notifyUser } from "@/lib/notify";
 import { formatTzs } from "@/lib/money";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { absoluteUrl } from "@/lib/utils";
 import type { SessionUser } from "@/lib/session";
 import { ListingError } from "./errors";
 
+import { SITE } from "@/config/site";
 const INSPECTION = "PRE_PURCHASE_INSPECTION" as const;
 
 /** Registered garages / inspection centres that offer pre-purchase inspections, nearest region first. */
@@ -59,14 +60,14 @@ export async function requestInspection(user: SessionUser, input: { listingId: s
   const carLink = absoluteUrl(`/cars/${listing.slug}`);
   const ownerId = provider.members[0]?.userId;
   const providerMsg = {
-    sms: `MagariSOKO Tanzania: Inspection request from ${buyer.name} (${formatTzPhone(buyer.phone)}) for ${listing.title.slice(0, 40)} at ${where.slice(0, 60)}, ${when}. Open your dashboard to confirm.`,
+    sms: `${SITE.name}: Inspection request from ${buyer.name} (${formatPhone(buyer.phone)}) for ${listing.title.slice(0, 40)} at ${where.slice(0, 60)}, ${when}. Open your dashboard to confirm.`,
     email: {
       subject: `New inspection request: ${listing.title}`,
       lines: [
-        `${buyer.name} (${formatTzPhone(buyer.phone)}) wants a pre-purchase inspection of ${listing.title}.`,
+        `${buyer.name} (${formatPhone(buyer.phone)}) wants a pre-purchase inspection of ${listing.title}.`,
         `Where the car is: ${where}. Preferred date: ${when}.`,
         ...(input.message ? [`Message: "${input.message.slice(0, 500)}"`] : []),
-        `Seller's number for arranging access: ${formatTzPhone(listing.contactPhone)}.`,
+        `Seller's number for arranging access: ${formatPhone(listing.contactPhone)}.`,
       ],
       action: { label: "Confirm the inspection", url: absoluteUrl("/dashboard/inspections") },
     },
@@ -74,7 +75,7 @@ export async function requestInspection(user: SessionUser, input: { listingId: s
   if (ownerId) void notifyUser(ownerId, providerMsg);
   else void notify({ phone: provider.phone, email: provider.email }, providerMsg);
   void notifyUser(listing.sellerId, {
-    sms: `MagariSOKO Tanzania: A buyer booked ${provider.name.slice(0, 30)} to inspect your ${listing.title.slice(0, 35)}. They will call you to arrange access.`,
+    sms: `${SITE.name}: A buyer booked ${provider.name.slice(0, 30)} to inspect your ${listing.title.slice(0, 35)}. They will call you to arrange access.`,
     email: { subject: "A buyer booked an inspection of your car", lines: [`${provider.name} will inspect ${listing.title} for a buyer (preferred date: ${when}).`, "They will call you to arrange access. A buyer who pays for an inspection is a serious buyer."] },
   });
   void notifyUser(user.id, {
@@ -118,15 +119,15 @@ export async function updateInspection(user: SessionUser, id: string, a: Inspect
   if (a.action === "schedule") {
     const updated = await prisma.inspectionRequest.update({ where: { id }, data: { status: "SCHEDULED", scheduledAt: a.scheduledAt } });
     const when = a.scheduledAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
-    void notifyUser(r.buyerId, { sms: `MagariSOKO Tanzania: ${provider.slice(0, 30)} confirmed the inspection of ${r.listing.title.slice(0, 35)} for ${when}.`, email: { subject: "Inspection confirmed", lines: [`${provider} will inspect ${r.listing.title} on ${when}.`] } });
-    void notifyUser(r.listing.sellerId, { sms: `MagariSOKO Tanzania: Inspection of your ${r.listing.title.slice(0, 35)} confirmed for ${when}. Please make the car available.` });
+    void notifyUser(r.buyerId, { sms: `${SITE.name}: ${provider.slice(0, 30)} confirmed the inspection of ${r.listing.title.slice(0, 35)} for ${when}.`, email: { subject: "Inspection confirmed", lines: [`${provider} will inspect ${r.listing.title} on ${when}.`] } });
+    void notifyUser(r.listing.sellerId, { sms: `${SITE.name}: Inspection of your ${r.listing.title.slice(0, 35)} confirmed for ${when}. Please make the car available.` });
     return updated;
   }
   if (a.action === "complete") {
     const isUrl = /^https?:\/\//i.test(a.report.trim());
     const updated = await prisma.inspectionRequest.update({ where: { id }, data: { status: "COMPLETED", reportUrl: isUrl ? a.report.trim() : null, notes: isUrl ? null : a.report.trim().slice(0, 4000) } });
     void notifyUser(r.buyerId, {
-      sms: `MagariSOKO Tanzania: Your inspection report for ${r.listing.title.slice(0, 40)} is ready. See your dashboard.`,
+      sms: `${SITE.name}: Your inspection report for ${r.listing.title.slice(0, 40)} is ready. See your dashboard.`,
       email: { subject: "Your inspection report is ready", lines: [`${provider} finished inspecting ${r.listing.title}.`, isUrl ? "Open the full report with the button below." : a.report.slice(0, 1500)], action: { label: isUrl ? "Open the report" : "See it in your dashboard", url: isUrl ? a.report.trim() : absoluteUrl("/dashboard/inspections") } },
     });
     return updated;
@@ -134,9 +135,9 @@ export async function updateInspection(user: SessionUser, id: string, a: Inspect
   const updated = await prisma.inspectionRequest.update({ where: { id }, data: { status: "CANCELLED", notes: a.reason?.slice(0, 500) ?? r.notes } });
   if (isBuyer) {
     const owner = r.providerId ? await prisma.businessMember.findFirst({ where: { businessId: r.providerId, role: "OWNER" }, select: { userId: true } }) : null;
-    if (owner) void notifyUser(owner.userId, { sms: `MagariSOKO Tanzania: The buyer cancelled the inspection of ${r.listing.title.slice(0, 40)}.` });
+    if (owner) void notifyUser(owner.userId, { sms: `${SITE.name}: The buyer cancelled the inspection of ${r.listing.title.slice(0, 40)}.` });
   } else {
-    void notifyUser(r.buyerId, { sms: `MagariSOKO Tanzania: ${provider.slice(0, 30)} cancelled the inspection of ${r.listing.title.slice(0, 35)}${a.reason ? `: ${a.reason.slice(0, 60)}` : ""}.` });
+    void notifyUser(r.buyerId, { sms: `${SITE.name}: ${provider.slice(0, 30)} cancelled the inspection of ${r.listing.title.slice(0, 35)}${a.reason ? `: ${a.reason.slice(0, 60)}` : ""}.` });
   }
   return updated;
 }

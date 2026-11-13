@@ -15,7 +15,7 @@ The strategy is to **keep it free for buyers and for the first two private listi
 | Parts Store Basic / Pro | 50,000 / 120,000 | 150 / 2,000 parts, storefront page |
 | Service Directory / Premium | 30,000 / 80,000 | Directory listing / priority placement and analytics |
 
-A yearly plan costs 10 months' price. A business without a plan can keep 5 active listings, which works as a free trial. When a dealer reaches the limit, the API returns HTTP 402 with an upgrade message.
+A yearly plan costs 10 months' price. During the launch phase listing is unlimited and free; in the paid phase (Admin → Pricing & fees) a business without a plan keeps 3 live listings, which works as a free trial. When a dealer reaches the limit, the API returns HTTP 402 with an upgrade message.
 
 **Why it works here:** Dar es Salaam showrooms already pay for newspaper classifieds, Instagram boosts and brokers. A single sale earns a dealer TZS 1–5M margin, so one extra lead a month covers Dealer Pro.
 

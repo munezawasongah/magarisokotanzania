@@ -14,6 +14,7 @@ export const en = {
     listFree: "List your car free", listFreeNote: "No listing fee and no commission — buyers call or WhatsApp you directly.",
     listFirstFree: "List your car — first {n} free", listFirstFreeNote: "Then {fee} per listing for {days} days. No commission on the sale.",
     budget: "Budget:", priceUnder: "Under {amount}", priceOver: "Over {amount}",
+    twoThreeWheelers: "Bodaboda & Bajaji",
     justListed: "Just listed", seeAll: "See all {count}", byMake: "Browse by make", byBody: "Browse by body type",
   },
   search: {

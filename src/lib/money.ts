@@ -1,3 +1,4 @@
+import { SITE } from "@/config/site";
 export type MoneyInput = bigint | number | string | null | undefined;
 
 export function toNum(v: MoneyInput): number {
@@ -5,19 +6,20 @@ export function toNum(v: MoneyInput): number {
   return typeof v === "bigint" ? Number(v) : Number(v);
 }
 
-const tzsFmt = new Intl.NumberFormat("en-TZ", { maximumFractionDigits: 0 });
+const tzsFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+const SYM = SITE.currencySymbol;
 
 /** 45000000 → "TSh 45,000,000" */
 export function formatTzs(v: MoneyInput): string {
-  return `TSh ${tzsFmt.format(Math.round(toNum(v)))}`;
+  return `${SYM} ${tzsFmt.format(Math.round(toNum(v)))}`;
 }
 
 /** 45000000 → "TSh 45M", 850000 → "TSh 850K" */
 export function formatTzsCompact(v: MoneyInput): string {
   const n = toNum(v);
-  if (n >= 1_000_000_000) return `TSh ${trim(n / 1_000_000_000)}B`;
-  if (n >= 1_000_000) return `TSh ${trim(n / 1_000_000)}M`;
-  if (n >= 1_000) return `TSh ${trim(n / 1_000)}K`;
+  if (n >= 1_000_000_000) return `${SYM} ${trim(n / 1_000_000_000)}B`;
+  if (n >= 1_000_000) return `${SYM} ${trim(n / 1_000_000)}M`;
+  if (n >= 1_000) return `${SYM} ${trim(n / 1_000)}K`;
   return formatTzs(n);
 }
 
@@ -37,7 +39,7 @@ export function tzsToUsd(tzs: MoneyInput, rate: number): number {
 export function parseTzsInput(raw: string | number | null | undefined): number | null {
   if (raw === null || raw === undefined || raw === "") return null;
   if (typeof raw === "number") return Number.isFinite(raw) ? Math.round(raw) : null;
-  const s = raw.trim().toLowerCase().replace(/tsh|tzs|,|\s/g, "");
+  const s = raw.trim().toLowerCase().replace(/tsh|tzs|ksh|kes|,|\s/g, "");
   const m = s.match(/^(\d+(?:\.\d+)?)([kmb])?$/);
   if (!m) return null;
   const mult = m[2] === "b" ? 1e9 : m[2] === "m" ? 1e6 : m[2] === "k" ? 1e3 : 1;

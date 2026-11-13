@@ -3,14 +3,14 @@ import { getDictionary } from "@/i18n/server";
 import { PRICE_BANDS, SITE } from "@/config/site";
 import { getBrowseCounts } from "@/server/browse-counts";
 import { Logo } from "./Header";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { enumLabel, fmt } from "@/i18n";
 
 export async function Footer() {
   const { dict, locale } = await getDictionary();
   const browse = await getBrowseCounts([...PRICE_BANDS]).catch(() => ({ makes: [], bodies: [], bands: [] }));
   const cols = [
-    { title: dict.nav.cars, links: [["SUVs", "/cars?body=SUV"], ["Pickups", "/cars?body=PICKUP"], ["4WD", "/cars?fourWd=1"], [dict.listing.importOnOrder, "/cars?importOnly=1"], ["Bodaboda & Bajaji", "/cars?body=MOTORCYCLE,THREE_WHEELER"]] },
+    { title: dict.nav.cars, links: [["SUVs", "/cars?body=SUV"], ["Pickups", "/cars?body=PICKUP"], ["4WD", "/cars?fourWd=1"], [dict.listing.importOnOrder, "/cars?importOnly=1"], [dict.hero.twoThreeWheelers, "/cars?body=MOTORCYCLE,THREE_WHEELER"]] },
     { title: dict.nav.parts, links: [["Toyota", "/parts?make=toyota"], ["Nissan", "/parts?make=nissan"], ["Subaru", "/parts?make=subaru"], [dict.enums.PartCategory.BRAKES, "/parts?category=BRAKES"], [dict.enums.PartCategory.TYRES_WHEELS, "/parts?category=TYRES_WHEELS"]] },
     { title: dict.nav.services, links: [[dict.enums.ServiceCategory.PRE_PURCHASE_INSPECTION, "/services?category=PRE_PURCHASE_INSPECTION"], [dict.enums.ServiceCategory.TOWING, "/services?category=TOWING"], [dict.enums.ServiceCategory.CLEARING_FORWARDING, "/services?category=CLEARING_FORWARDING"], [dict.enums.ServiceCategory.FINANCING, "/services?category=FINANCING"]] },
     { title: SITE.name, links: [[dict.nav.sell, "/sell"], [dict.nav.dealers, "/dealers"], [locale === "sw" ? "Bei za matangazo" : "Pricing for businesses", "/pricing"], [dict.nav.login, "/login"]] },
@@ -23,7 +23,7 @@ export async function Footer() {
           <Logo className="h-32 w-32" />
           <p className="max-w-md text-sm">{locale === "sw" ? SITE.taglineSw : SITE.taglineEn}</p>
           <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
-            <a href={`tel:${SITE.supportPhone}`} className="tabular-nums hover:text-white">{formatTzPhone(SITE.supportPhone)}</a>
+            <a href={`tel:${SITE.supportPhone}`} className="tabular-nums hover:text-white">{formatPhone(SITE.supportPhone)}</a>
             <span aria-hidden>·</span>
             <a href={`https://wa.me/${SITE.supportPhone.replace("+", "")}`} target="_blank" rel="noopener noreferrer" className="hover:text-white">WhatsApp</a>
             <span aria-hidden>·</span>

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { BadgeCheck, Phone } from "lucide-react";
 import { enumLabel, type Dictionary } from "@/i18n";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 import { whatsappLink } from "@/lib/whatsapp";
 import { formatTzs } from "@/lib/money";
 import { WhatsAppIcon } from "@/components/ui/icons";
 
+import { SITE } from "@/config/site";
 type Provider = { id: string; name: string; slug: string; phone: string; whatsapp: string | null; verification: string; services: Array<{ category: string; title: string }> };
 
 /** Registered finance & insurance providers, with a WhatsApp message about this exact car. */
@@ -24,9 +25,9 @@ export function FinanceProviders({ providers, car, dict }: { providers: Provider
                 <p className="truncate text-xs text-ink-500">{p.services.map((s) => enumLabel(dict, "ServiceCategory", s.category)).filter((v, i, a) => a.indexOf(v) === i).join(" · ")}</p>
               </div>
               <div className="flex gap-1.5">
-                <a href={`tel:${p.phone}`} className="btn-ghost px-2.5 py-1.5 text-xs tabular-nums"><Phone className="h-3.5 w-3.5" />{formatTzPhone(p.phone)}</a>
+                <a href={`tel:${p.phone}`} className="btn-ghost px-2.5 py-1.5 text-xs tabular-nums"><Phone className="h-3.5 w-3.5" />{formatPhone(p.phone)}</a>
                 <a
-                  href={whatsappLink(p.whatsapp ?? p.phone, `Habari ${p.name}, ningependa mkopo wa gari: ${car.title} (${formatTzs(car.priceTzs)}) ${car.url} — MagariSOKO Tanzania`)}
+                  href={whatsappLink(p.whatsapp ?? p.phone, `Habari ${p.name}, ningependa mkopo wa gari: ${car.title} (${formatTzs(car.priceTzs)}) ${car.url} — ${SITE.name}`)}
                   target="_blank" rel="noopener noreferrer" className="btn-wa px-2.5 py-1.5 text-xs" aria-label={dict.finance.contact}
                 ><WhatsAppIcon className="h-3.5 w-3.5" /></a>
               </div>

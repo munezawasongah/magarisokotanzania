@@ -1,6 +1,7 @@
 import "server-only";
 import type { PaymentProvider } from "@/generated/prisma/enums";
 import type { InitiateParams, InitiateResult, PaymentGatewayAdapter, VerifyResult } from "./types";
+import { SITE } from "@/config/site";
 
 /**
  * DPO Pay (Network International) — hosted card checkout (Visa/Mastercard).
@@ -34,7 +35,7 @@ export const dpo: PaymentGatewayAdapter & { verify(token: string): Promise<Verif
   <Request>createToken</Request>
   <Transaction>
     <PaymentAmount>${p.amountTzs}</PaymentAmount>
-    <PaymentCurrency>TZS</PaymentCurrency>
+    <PaymentCurrency>${SITE.currency}</PaymentCurrency>
     <CompanyRef>${esc(p.reference)}</CompanyRef>
     <RedirectURL>${esc(p.returnUrl)}</RedirectURL>
     <BackURL>${esc(p.cancelUrl)}</BackURL>

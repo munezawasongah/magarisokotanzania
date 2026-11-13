@@ -12,6 +12,7 @@ import { scoreInquiry } from "./fraud/engine";
 import { getDeviceContext, recordDevice } from "@/lib/device";
 import { Prisma } from "@/generated/prisma/client";
 
+import { SITE } from "@/config/site";
 const MAX_PER_PHONE_PER_HOUR = 8;
 
 export async function createInquiry(input: InquiryInput, ctx: { buyer?: SessionUser | null; ipHash?: string }) {
@@ -92,7 +93,7 @@ export async function createInquiry(input: InquiryInput, ctx: { buyer?: SessionU
   // Notify the seller by SMS (non-blocking)
   const offer = input.offerTzs ? ` Offer: ${formatTzs(input.offerTzs)}.` : "";
   void notifyUser(recipientId, {
-    sms: `${flagged ? "CAUTION - possible scam. " : ""}MagariSOKO Tanzania: New inquiry on "${subject.slice(0, 50)}" from ${input.name} (${input.phone}).${offer} Reply from your dashboard.`,
+    sms: `${flagged ? "CAUTION - possible scam. " : ""}${SITE.name}: New inquiry on "${subject.slice(0, 50)}" from ${input.name} (${input.phone}).${offer} Reply from your dashboard.`,
     email: {
       subject: `New inquiry: ${subject.slice(0, 60)}`,
       lines: [
@@ -133,7 +134,7 @@ export async function replyToInquiry(user: SessionUser, id: string, body: string
   const msg = await prisma.inquiryMessage.create({ data: { inquiryId: id, senderId: user.id, body } });
   if (inq.recipientId === user.id) {
     if (inq.status === "NEW") await prisma.inquiry.update({ where: { id }, data: { status: "CONTACTED" } });
-    void sendSms(inq.phone, `MagariSOKO Tanzania: The seller replied: "${body.slice(0, 120)}"`);
+    void sendSms(inq.phone, `${SITE.name}: The seller replied: "${body.slice(0, 120)}"`);
   }
   return msg;
 }

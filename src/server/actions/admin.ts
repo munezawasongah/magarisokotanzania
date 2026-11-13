@@ -9,10 +9,11 @@ import { DEFAULT_IMPORT_TAX_RULES } from "@/config/import-tax";
 import { redirect } from "next/navigation";
 import { ListingError } from "@/server/listings";
 import { banUser, chassisKey, clearListingFlags, scoreListing, unbanUser } from "@/server/fraud/engine";
-import { normalizeTzPhone } from "@/lib/phone";
+import { normalizePhone } from "@/lib/phone";
 import { BlockType } from "@/generated/prisma/enums";
 import { approveRegistration, rejectRegistration } from "@/server/registration";
 
+import { SITE } from "@/config/site";
 async function staff() {
   const u = await getCurrentUser();
   if (!u || !u.roles.some((r) => r === "ADMIN" || r === "MODERATOR")) throw new Error("Forbidden");
@@ -51,7 +52,7 @@ const rulesSchema = z.object({
   importDutyPct: z.coerce.number().min(0).max(100), vatPct: z.coerce.number().min(0).max(100),
   railwayLevyPct: z.coerce.number().min(0).max(20), customsProcessingFeePct: z.coerce.number().min(0).max(20),
   engine1: z.coerce.number().min(0).max(100), engine2: z.coerce.number().min(0).max(100), engine3: z.coerce.number().min(0).max(100),
-  age1: z.coerce.number().min(0).max(100), age2: z.coerce.number().min(0).max(100), age3: z.coerce.number().min(0).max(100),
+  age1: z.coerce.number().min(0).max(100).optional(), age2: z.coerce.number().min(0).max(100).optional(), age3: z.coerce.number().min(0).max(100).optional(),
   registrationTzs: z.coerce.number().int().min(0), portAndShippingLineTzs: z.coerce.number().int().min(0), clearingAgentTzs: z.coerce.number().int().min(0),
   updatedNote: z.string().max(300),
   fxRate: z.coerce.number().min(0).optional(),
@@ -66,10 +67,10 @@ export async function saveSettingsAction(formData: FormData) {
     ...d,
     importDutyPct: v.importDutyPct, vatPct: v.vatPct, railwayLevyPct: v.railwayLevyPct, customsProcessingFeePct: v.customsProcessingFeePct,
     engineExcise: [{ maxCc: d.engineExcise[0].maxCc, pct: v.engine1 }, { maxCc: d.engineExcise[1].maxCc, pct: v.engine2 }, { maxCc: null, pct: v.engine3 }],
-    ageExcise: [{ ...d.ageExcise[0], pct: v.age1 }, { ...d.ageExcise[1], pct: v.age2 }, { ...d.ageExcise[2], pct: v.age3 }],
+    ageExcise: d.ageExcise.map((b, i) => ({ ...b, pct: [v.age1, v.age2, v.age3][i] ?? b.pct })),
     registrationTzs: v.registrationTzs, portAndShippingLineTzs: v.portAndShippingLineTzs, clearingAgentTzs: v.clearingAgentTzs, updatedNote: v.updatedNote,
   });
-  if (v.fxRate && v.fxRate > 500) await prisma.exchangeRate.create({ data: { rate: v.fxRate, source: "manual" } });
+  if (v.fxRate && v.fxRate > SITE.amounts.fxSanityMin) await prisma.exchangeRate.create({ data: { rate: v.fxRate, source: "manual", quote: SITE.currency } });
   await prisma.auditLog.create({ data: { actorId: u.id, action: "settings.importTaxRules", entityType: "SiteSetting", entityId: "importTaxRules" } });
   revalidatePath("/admin/settings");
 }
@@ -144,7 +145,7 @@ export async function addBlocklistAction(formData: FormData) {
   const type = String(formData.get("type")) as BlockType;
   if (!(type in BlockType)) throw new Error("Invalid type");
   let value = String(formData.get("value") ?? "").trim();
-  if (type === "PHONE") value = normalizeTzPhone(value) ?? value.replace(/\s+/g, "");
+  if (type === "PHONE") value = normalizePhone(value) ?? value.replace(/\s+/g, "");
   if (type === "EMAIL" || type === "KEYWORD") value = value.toLowerCase();
   if (type === "CHASSIS") value = chassisKey(value) ?? "";
   if (!value) redirect("/admin/blocklist?error=" + encodeURIComponent("Enter a value"));

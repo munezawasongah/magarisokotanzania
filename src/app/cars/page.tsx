@@ -12,6 +12,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { QuickFilters } from "@/components/search/QuickFilters";
 import { SaveSearchButton } from "@/components/search/SaveSearchButton";
 import { Suspense } from "react";
+import { SITE } from "@/config/site";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
@@ -23,7 +24,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
   const model = make?.models.find((m) => m.slug === f.model);
   const region = regions.find((r) => r.slug === f.region);
   const what = [make?.name, model?.name].filter(Boolean).join(" ") || "Cars";
-  const where = region ? ` in ${region.name}` : " in Tanzania";
+  const where = region ? ` in ${region.name}` : ` in ${SITE.countryName}`;
   const title = `${what} for sale${where}`;
   const canonical = new URLSearchParams();
   if (f.make) canonical.set("make", f.make);

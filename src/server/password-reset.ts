@@ -2,11 +2,11 @@ import "server-only";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { issueOtp, verifyOtp } from "@/lib/otp";
-import { normalizeTzPhone } from "@/lib/phone";
+import { normalizePhone } from "@/lib/phone";
 import { notify } from "@/lib/notify";
 import { ListingError } from "./errors";
 import { SITE } from "@/config/site";
-import { formatTzPhone } from "@/lib/phone";
+import { formatPhone } from "@/lib/phone";
 
 type Dest = { key: string; via: "sms" | "email"; where: { phone: string } | { email: string } };
 
@@ -17,7 +17,7 @@ export function resetDestination(identifier: string): Dest | null {
     const email = id.toLowerCase();
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? { key: email, via: "email", where: { email } } : null;
   }
-  const phone = normalizeTzPhone(id);
+  const phone = normalizePhone(id);
   return phone ? { key: phone, via: "sms", where: { phone } } : null;
 }
 
@@ -27,7 +27,7 @@ export function resetDestination(identifier: string): Dest | null {
  */
 export async function requestPasswordReset(identifier: string, ipHash?: string) {
   const dest = resetDestination(identifier);
-  if (!dest) throw new ListingError("Enter a valid Tanzanian phone number or email address", 422);
+  if (!dest) throw new ListingError(`Enter a valid ${SITE.countryAdjective} phone number or email address`, 422);
   const user = await prisma.user.findFirst({ where: { ...dest.where, status: "ACTIVE" }, select: { id: true } });
   if (!user) return { ok: true as const };
   const r = await issueOtp(dest.key, "RESET_PASSWORD", ipHash, dest.via);
@@ -38,7 +38,7 @@ export async function requestPasswordReset(identifier: string, ipHash?: string) 
 /** Step 2: check the code and set the new password. */
 export async function confirmPasswordReset(identifier: string, code: string, password: string) {
   const dest = resetDestination(identifier);
-  if (!dest) throw new ListingError("Enter a valid Tanzanian phone number or email address", 422);
+  if (!dest) throw new ListingError(`Enter a valid ${SITE.countryAdjective} phone number or email address`, 422);
   const user = await prisma.user.findFirst({ where: { ...dest.where, status: "ACTIVE" }, select: { id: true, phone: true, email: true } });
   // verify even when there is no account, so timing does not reveal it
   const valid = await verifyOtp(dest.key, code, "RESET_PASSWORD");
@@ -52,8 +52,8 @@ export async function confirmPasswordReset(identifier: string, code: string, pas
   });
   await prisma.auditLog.create({ data: { actorId: user.id, action: "user.password_reset", entityType: "User", entityId: user.id, meta: { via: dest.via } } });
   void notify(user, {
-    sms: `MagariSOKO Tanzania: your password was just changed. If this wasn't you, call us immediately on ${formatTzPhone(SITE.supportPhone)}.`,
-    email: { subject: "Your password was changed", lines: ["The password on your MagariSOKO Tanzania account was just changed.", "If this wasn't you, contact us immediately so we can secure your account."] },
+    sms: `${SITE.name}: your password was just changed. If this wasn't you, call us immediately on ${formatPhone(SITE.supportPhone)}.`,
+    email: { subject: "Your password was changed", lines: [`The password on your ${SITE.name} account was just changed.`, "If this wasn't you, contact us immediately so we can secure your account."] },
   });
   return { ok: true as const };
 }

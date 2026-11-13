@@ -9,7 +9,7 @@ import { MobileNav } from "./MobileNav";
 import { HeaderShell } from "./HeaderShell";
 
 /**
- * The MagariSOKO Tanzania logo exactly as designed (round emblem with the name inside),
+ * The site logo (public/brand) exactly as designed (round emblem with the name inside),
  * on a white tile so the navy lettering stays readable on the dark header and footer.
  * Shown at ≥112px so "MAGARISOKO" and "TANZANIA" are legible.
  */

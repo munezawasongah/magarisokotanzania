@@ -29,6 +29,7 @@ import { FavoriteButton } from "@/components/listing/FavoriteButton";
 import { ReportButton } from "@/components/listing/ReportButton";
 import { VehicleCard } from "@/components/listing/VehicleCard";
 
+import { SITE } from "@/config/site";
 type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -101,10 +102,10 @@ export default async function ListingPage({ params }: { params: Params }) {
     offers: {
       "@type": "Offer",
       price: toNum(l.priceTzs),
-      priceCurrency: "TZS",
+      priceCurrency: SITE.currency,
       availability: l.status === "SOLD" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
       url,
-      areaServed: { "@type": "Place", name: `${l.region.name}, Tanzania` },
+      areaServed: { "@type": "Place", name: `${l.region.name}, ${SITE.countryName}` },
       seller: l.business ? { "@type": "AutoDealer", name: l.business.name } : { "@type": "Person", name: l.seller.name },
     },
   };
@@ -176,14 +177,14 @@ export default async function ListingPage({ params }: { params: Params }) {
             {l.latitude != null && l.longitude != null ? (
               <LocationMap lat={l.latitude} lng={l.longitude} label={l.title} directionsLabel={dict.shop.directions} className="h-72" />
             ) : (
-              <a className="btn-ghost py-2" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${[l.locationAddress, place].filter(Boolean).join(", ")}, Tanzania`)}`}>{dict.shop.directions}</a>
+              <a className="btn-ghost py-2" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${[l.locationAddress, place].filter(Boolean).join(", ")}, ${SITE.countryName}`)}`}>{dict.shop.directions}</a>
             )}
           </section>
 
           {landed && (
             <section>
               <h2 className="mb-1 text-lg font-bold">{dict.listing.landedTitle}</h2>
-              <p className="mb-3 text-xs text-ink-500">{dict.listing.landedNote} FOB ${l.fobUsd?.toLocaleString()} · USD/TZS {Math.round(landed.usdTzsRate).toLocaleString()}</p>
+              <p className="mb-3 text-xs text-ink-500">{dict.listing.landedNote} FOB ${l.fobUsd?.toLocaleString()} · USD/{SITE.currency} {Math.round(landed.usdTzsRate).toLocaleString()}</p>
               <table className="w-full overflow-hidden rounded-lg border border-line bg-white text-sm">
                 <tbody>
                   {landed.lines.map((line) => (

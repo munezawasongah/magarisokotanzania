@@ -6,6 +6,7 @@ import { CONTACT_PATTERNS } from "@/config/fraud";
 import type { SessionUser } from "@/lib/session";
 import { ListingError } from "./errors";
 
+import { SITE } from "@/config/site";
 export type ReviewEligibility = { ok: true } | { ok: false; reason: "login" | "own" | "no_contact" | "blocked" };
 
 /**
@@ -50,7 +51,7 @@ export async function upsertReview(user: SessionUser, input: { businessId: strin
   const elig = await reviewEligibility(user.id, input.businessId);
   if (!elig.ok) {
     throw new ListingError(
-      elig.reason === "own" ? "You cannot review your own business." : elig.reason === "no_contact" ? "Only buyers who contacted this seller through MagariSOKO Tanzania can review them." : "You cannot post reviews.",
+      elig.reason === "own" ? "You cannot review your own business." : elig.reason === "no_contact" ? `Only buyers who contacted this seller through ${SITE.name} can review them.` : "You cannot post reviews.",
       403,
     );
   }
@@ -70,7 +71,7 @@ export async function upsertReview(user: SessionUser, input: { businessId: strin
     ]);
     if (owner && biz) {
       void notifyUser(owner.userId, {
-        sms: `MagariSOKO Tanzania: New ${input.rating}-star review for ${biz.name.slice(0, 40)}. Reply from your mini-site.`,
+        sms: `${SITE.name}: New ${input.rating}-star review for ${biz.name.slice(0, 40)}. Reply from your mini-site.`,
         email: { subject: `New ${input.rating}-star review`, lines: [`A buyer rated ${biz.name} ${input.rating} out of 5:`, `"${body.slice(0, 500)}"`, "You can reply publicly on your mini-site."], action: { label: "See the review", url: absoluteUrl(`/shop/${biz.slug}#reviews`) } },
       });
     }

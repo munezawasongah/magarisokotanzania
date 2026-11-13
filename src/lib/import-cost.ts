@@ -1,4 +1,4 @@
-import { DEFAULT_IMPORT_TAX_RULES, type ImportTaxRules } from "@/config/import-tax";
+import { DEFAULT_IMPORT_TAX_RULES, LEVY_LABELS, LOAN_DEFAULTS, type ImportTaxRules } from "@/config/import-tax";
 
 export type LandedCostInput = {
   fobUsd: number;
@@ -27,7 +27,7 @@ export type LandedCostResult = {
 const r = (n: number) => Math.round(n);
 
 /**
- * Tanzania landed-cost estimate for an imported vehicle.
+ * Landed-cost estimate for an imported vehicle (rates in src/config/import-tax.ts, editable by the admin).
  *   CIF            = FOB + freight + insurance (insurance defaults to 1.5% of FOB+freight)
  *   Import duty    = CIF × importDuty%
  *   Excise (cc)    = (CIF + duty) × band%
@@ -69,14 +69,17 @@ export function estimateLandedCost(input: LandedCostInput): LandedCostResult {
     { key: "cif", label: "Vehicle CIF value", labelSw: "Thamani ya gari (CIF)", tzs: r(cifTzs), note: `$${r(cifUsd).toLocaleString()} @ ${input.usdTzsRate.toFixed(0)}` },
     { key: "duty", label: `Import duty (${rules.importDutyPct}%)`, labelSw: `Ushuru wa forodha (${rules.importDutyPct}%)`, tzs: r(duty) },
     { key: "excise_cc", label: `Excise duty – engine (${engineBandPct}%)`, labelSw: `Ushuru wa bidhaa – injini (${engineBandPct}%)`, tzs: r(engineExcise) },
-    { key: "excise_age", label: `Excise duty – age ${ageYears} yrs (${agePct}%)`, labelSw: `Ushuru wa umri – miaka ${ageYears} (${agePct}%)`, tzs: r(ageExcise) },
+    ...(rules.ageExcise.length ? [{ key: "excise_age", label: `${LEVY_LABELS.ageExcise[0]} ${ageYears} yrs (${agePct}%)`, labelSw: `${LEVY_LABELS.ageExcise[1]} – miaka ${ageYears} (${agePct}%)`, tzs: r(ageExcise) }] : []),
     { key: "vat", label: `VAT (${rules.vatPct}%)`, labelSw: `VAT (${rules.vatPct}%)`, tzs: r(vat) },
-    { key: "rdl", label: `Railway development levy (${rules.railwayLevyPct}%)`, labelSw: `Tozo ya reli (${rules.railwayLevyPct}%)`, tzs: r(rdl) },
-    { key: "cpf", label: `Customs processing fee (${rules.customsProcessingFeePct}%)`, labelSw: `Ada ya uchakataji forodha (${rules.customsProcessingFeePct}%)`, tzs: r(cpf) },
+    { key: "rdl", label: `${LEVY_LABELS.railwayLevy[0]} (${rules.railwayLevyPct}%)`, labelSw: `${LEVY_LABELS.railwayLevy[1]} (${rules.railwayLevyPct}%)`, tzs: r(rdl) },
+    { key: "cpf", label: `${LEVY_LABELS.processingFee[0]} (${rules.customsProcessingFeePct}%)`, labelSw: `${LEVY_LABELS.processingFee[1]} (${rules.customsProcessingFeePct}%)`, tzs: r(cpf) },
     { key: "port", label: "Port & shipping-line charges", labelSw: "Gharama za bandari na meli", tzs: rules.portAndShippingLineTzs },
     { key: "clearing", label: "Clearing agent", labelSw: "Wakala wa forodha", tzs: rules.clearingAgentTzs },
-    { key: "registration", label: "TRA registration & plates", labelSw: "Usajili wa TRA na namba", tzs: rules.registrationTzs },
+    { key: "registration", label: LEVY_LABELS.registration[0], labelSw: LEVY_LABELS.registration[1], tzs: rules.registrationTzs },
   ];
+  if (rules.maxImportAgeYears !== null && rules.maxImportAgeYears !== undefined && ageYears > rules.maxImportAgeYears) {
+    lines.unshift({ key: "age_limit", label: `Over the ${rules.maxImportAgeYears}-year import age limit — this car may not be importable`, labelSw: `Zaidi ya kikomo cha umri wa miaka ${rules.maxImportAgeYears} — huenda gari hili lisiruhusiwe kuingizwa`, tzs: 0 });
+  }
   const totalTaxesTzs = r(duty + engineExcise + ageExcise + vat + rdl + cpf);
   const totalLocalFeesTzs = rules.portAndShippingLineTzs + rules.clearingAgentTzs + rules.registrationTzs;
   return {
@@ -93,11 +96,10 @@ export function monthlyLoanPayment(principal: number, annualRatePct: number, mon
   return (principal * i) / (1 - Math.pow(1 + i, -months));
 }
 
-/** Typical Tanzanian bank / asset-finance vehicle loan, used for "from … / month" estimates. */
-export const LOAN_DEFAULTS = { depositPct: 30, ratePct: 17, months: 36 } as const;
+export { LOAN_DEFAULTS };
 
-/** Estimated monthly repayment for a car at the default loan terms (rounded to the nearest TSh 1,000). */
+/** Estimated monthly repayment for a car at the default loan terms (rounded to LOAN_DEFAULTS.roundTo). */
 export function estimateMonthly(priceTzs: number, terms: { depositPct: number; ratePct: number; months: number } = LOAN_DEFAULTS) {
   const principal = priceTzs * (1 - terms.depositPct / 100);
-  return Math.round(monthlyLoanPayment(principal, terms.ratePct, terms.months) / 1000) * 1000;
+  return Math.round(monthlyLoanPayment(principal, terms.ratePct, terms.months) / LOAN_DEFAULTS.roundTo) * LOAN_DEFAULTS.roundTo;
 }

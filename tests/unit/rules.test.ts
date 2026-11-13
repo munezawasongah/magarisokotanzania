@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { formatTzs, parseTzsInput } from "@/lib/money";
-import { formatTzPhone, normalizeTzPhone } from "@/lib/phone";
+import { formatPhone, normalizePhone } from "@/lib/phone";
 import { listingCreateSchema, listingUpdateSchema, manualPaymentSchema, partCreateSchema, registerSchema, registrationDetailsSchema, shopSchema } from "@/lib/validation";
 import { estimateMonthly, monthlyLoanPayment } from "@/lib/import-cost";
 import { renderEmail } from "@/lib/email";
@@ -32,13 +32,13 @@ describe("money", () => {
 
 describe("phone numbers", () => {
   it("normalises every local format to +255", () => {
-    for (const v of ["0668212595", "668212595", "+255668212595", "255 668 212 595", "0668 212 595"]) expect(normalizeTzPhone(v)).toBe("+255668212595");
+    for (const v of ["0668212595", "668212595", "+255668212595", "255 668 212 595", "0668 212 595"]) expect(normalizePhone(v)).toBe("+255668212595");
   });
   it("rejects non-Tanzanian or short numbers", () => {
-    expect(normalizeTzPhone("0724090067123")).toBeNull();
-    expect(normalizeTzPhone("12345")).toBeNull();
+    expect(normalizePhone("0724090067123")).toBeNull();
+    expect(normalizePhone("12345")).toBeNull();
   });
-  it("formats for display", () => expect(formatTzPhone("+255668212595")).toBe("+255 668 212 595"));
+  it("formats for display", () => expect(formatPhone("+255668212595")).toBe("+255 668 212 595"));
 });
 
 describe("vehicle listings", () => {

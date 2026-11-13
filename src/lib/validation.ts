@@ -3,9 +3,10 @@ import {
   BodyType, Drivetrain, FuelType, InquiryType, OriginCountry, PartAuthenticity, PartCategory, PartCondition,
   SellerType, Steering, Transmission, VehicleCondition, PaymentProvider, ServiceCategory,
 } from "@/generated/prisma/enums";
-import { normalizeTzPhone } from "./phone";
+import { normalizePhone } from "./phone";
 import { parseTzsInput } from "./money";
 
+import { SITE } from "@/config/site";
 const CURRENT_YEAR = new Date().getFullYear();
 
 /** Photo URL: https (Cloudinary/S3) or a local development upload under /uploads/. */
@@ -15,9 +16,9 @@ export const tzPhone = z
   .string()
   .trim()
   .transform((v, ctx) => {
-    const n = normalizeTzPhone(v);
+    const n = normalizePhone(v);
     if (!n) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid Tanzanian mobile number, e.g. 0712 345 678" });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Enter a valid ${SITE.countryAdjective} mobile number, e.g. ${SITE.phoneExample}` });
       return z.NEVER;
     }
     return n;
@@ -26,7 +27,7 @@ export const tzPhone = z
 const tzs = z.union([z.string(), z.number()]).transform((v, ctx) => {
   const n = parseTzsInput(v);
   if (n === null || n < 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid amount in TZS" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Enter a valid amount in ${SITE.currency}` });
     return z.NEVER;
   }
   return n;
@@ -65,10 +66,10 @@ export const listingCreateSchema = z
     doors: optionalInt(0, 8),
     seats: optionalInt(1, 90),
     groundClearanceMm: optionalInt(80, 600),
-    registrationSeries: z.string().trim().toUpperCase().max(2).optional(),
+    registrationSeries: z.string().trim().toUpperCase().max(SITE.plateSeries.maxLength).optional(),
     chassisNumber: z.string().trim().max(30).optional(),
     features: z.array(z.string().max(60)).max(60).default([]),
-    priceTzs: tzs.refine((n) => n >= 100_000, "Enter the price in TZS — vehicles cannot be listed without a price"),
+    priceTzs: tzs.refine((n) => n >= SITE.amounts.vehicleMin, `Enter the price in ${SITE.currency} — vehicles cannot be listed without a price`),
     priceNegotiable: z.coerce.boolean().default(true),
     showUsdPrice: z.coerce.boolean().default(false),
     regionId: z.coerce.number().int().positive(),
@@ -190,7 +191,7 @@ export const partCreateSchema = z.object({
   brand: z.string().trim().max(60).optional(),
   partNumber: z.string().trim().max(60).optional(),
   oemNumber: z.string().trim().max(60).optional(),
-  priceTzs: tzs.refine((n) => n >= 500, "Enter the price in TZS — parts cannot be listed without a price"),
+  priceTzs: tzs.refine((n) => n >= SITE.amounts.partMin, `Enter the price in ${SITE.currency} — parts cannot be listed without a price`),
   stockQty: z.coerce.number().int().min(0).max(100000).default(1),
   warrantyDays: optionalInt(0, 3650),
   regionId: z.coerce.number().int().positive(),
@@ -302,7 +303,7 @@ export const shopSchema = z.object({
       z.object({
         category: z.nativeEnum(ServiceCategory),
         title: z.string().trim().min(2).max(100),
-        priceFromTzs: tzs.refine((n) => n >= 1_000, "Every service needs a price (at least TSh 1,000)"),
+        priceFromTzs: tzs.refine((n) => n >= SITE.amounts.serviceMin, `Every service needs a price (at least ${SITE.currencySymbol} ${SITE.amounts.serviceMin.toLocaleString("en-US")})`),
         mobileService: z.coerce.boolean().default(false),
       }),
     )

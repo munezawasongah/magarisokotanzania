@@ -5,10 +5,12 @@ import { RevenueChart } from "@/components/admin/RevenueChart";
 import { formatTzs } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
+import { SITE } from "@/config/site";
+import { en } from "@/i18n/en";
 export const metadata = { title: "Revenue" };
 
 const PURPOSE: Record<string, string> = { REGISTRATION_FEE: "Seller registrations", PROMOTION: "Featured / sponsored ads", SUBSCRIPTION: "Monthly plans", INSPECTION_FEE: "Inspection fees", AD_PLACEMENT: "Banner adverts", LISTING_FEE: "Listing fees (old)" };
-const METHOD: Record<string, string> = { MPESA: "Vodacom M-Pesa", TIGO_PESA: "Mixx by Yas", AIRTEL_MONEY: "Airtel Money", HALOPESA: "HaloPesa", AZAMPESA: "AzamPesa", CARD: "Visa / Mastercard", LIPA_NAMBA: "Lipa Namba (manual)" };
+
 const LABEL: Record<Period, string> = { "7d": "7 days", "30d": "30 days", "90d": "90 days", "12m": "12 months" };
 
 function Bars({ title, rows, names, total }: { title: string; rows: Array<{ key: string; tzs: number; count: number }>; names: Record<string, string>; total: number }) {
@@ -32,6 +34,9 @@ function Bars({ title, rows, names, total }: { title: string; rows: Array<{ key:
   );
 }
 
+/** Payment method names come from the country's wallet labels plus the manual option. */
+const methodNames: Record<string, string> = { ...en.enums.PaymentProvider, LIPA_NAMBA: `${SITE.manualPayment.label} (manual)` };
+
 export default async function RevenuePage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   const { period: p } = await searchParams;
   const period = (p && p in PERIODS ? p : "30d") as Period;
@@ -52,7 +57,7 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="display text-2xl">Revenue</h1>
-          <p className="mt-1 text-sm text-ink-500">Money received: online payments confirmed by the gateway, plus Lipa Namba registration payments you verified.</p>
+          <p className="mt-1 text-sm text-ink-500">Money received: online payments confirmed by the gateway, plus {SITE.manualPayment.label} registration payments you verified.</p>
         </div>
         <a href={`/api/admin/revenue?period=${period}`} className="btn-ghost py-2 text-sm"><Download className="h-4 w-4" />Download CSV</a>
       </header>
@@ -77,7 +82,7 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Bars title="By revenue stream" rows={r.byPurpose} names={PURPOSE} total={r.total} />
-        <Bars title="By payment method" rows={r.byMethod} names={METHOD} total={r.total} />
+        <Bars title="By payment method" rows={r.byMethod} names={methodNames} total={r.total} />
       </div>
 
       <section className="panel p-5">
@@ -99,10 +104,10 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
               <tbody>
                 {r.entries.slice(0, 30).map((e) => (
                   <tr key={e.id} className="border-t border-line">
-                    <td className="whitespace-nowrap px-5 py-2">{e.at.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Dar_es_Salaam" })}</td>
+                    <td className="whitespace-nowrap px-5 py-2">{e.at.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: SITE.timeZone })}</td>
                     <td className="px-2 py-2">{e.who}</td>
                     <td className="px-2 py-2">{PURPOSE[e.purpose] ?? e.purpose}</td>
-                    <td className="px-2 py-2">{METHOD[e.method] ?? e.method}</td>
+                    <td className="px-2 py-2">{methodNames[e.method] ?? e.method}</td>
                     <td className="px-2 py-2 font-mono text-xs">{e.reference}</td>
                     <td className="px-5 py-2 text-right tabular-nums">{formatTzs(e.amountTzs)}</td>
                   </tr>

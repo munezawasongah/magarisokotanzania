@@ -9,6 +9,7 @@ import { ImageUploader, type UploadedImage } from "./ImageUploader";
 import { cn } from "@/lib/utils";
 
 import { type ShopKind, type ShopValues } from "@/lib/shop-values";
+import { SITE } from "@/config/site";
 export type { ShopKind, ShopValues } from "@/lib/shop-values";
 
 type RegionOpt = { id: number; name: string; districts: Array<{ id: number; name: string }> };
@@ -84,7 +85,7 @@ export function ShopForm({ kind, regions, initial, onSubmit, submitLabel }: {
             <option value="">—</option>{region?.districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         ) })}
-        {Field({ label: kind === "SELLER" ? t.addressPrivate : t.address, k: "address", className: "sm:col-span-2", children: <input className="field" value={v.address} onChange={(e) => set("address", e.target.value)} required maxLength={200} placeholder="e.g. Mikocheni B, near Shoppers Plaza" /> })}
+        {Field({ label: kind === "SELLER" ? t.addressPrivate : t.address, k: "address", className: "sm:col-span-2", children: <input className="field" value={v.address} onChange={(e) => set("address", e.target.value)} required maxLength={200} placeholder={SITE.addressExample} /> })}
         <div className="sm:col-span-2">
           <label className="label">{t.pin}</label>
           <LocationPicker

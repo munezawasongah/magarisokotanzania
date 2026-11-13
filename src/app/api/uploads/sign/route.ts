@@ -1,6 +1,7 @@
 import { apiUser } from "@/lib/session";
 import { signCloudinaryUpload } from "@/lib/cloudinary";
 import { json, jsonError } from "@/lib/json";
+import { SITE } from "@/config/site";
 
 /**
  * Returns a signature for a direct browser → Cloudinary upload. Images never
@@ -11,7 +12,7 @@ export async function POST() {
   const user = await apiUser();
   if (!user) return jsonError("Unauthorized", 401);
   const timestamp = Math.floor(Date.now() / 1000);
-  const signed = signCloudinaryUpload({ timestamp, folder: `magarisoko/${user.id}`, transformation: "c_limit,w_2000,h_2000,q_auto:good" });
+  const signed = signCloudinaryUpload({ timestamp, folder: `${SITE.slug}/${user.id}`, transformation: "c_limit,w_2000,h_2000,q_auto:good" });
   if (!signed) return json({ provider: "local" });
   return json({ provider: "cloudinary", ...signed, uploadUrl: `https://api.cloudinary.com/v1_1/${signed.cloudName}/image/upload` });
 }

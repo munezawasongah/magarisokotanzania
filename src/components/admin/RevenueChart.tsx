@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
+import { SITE } from "@/config/site";
 
 type Point = { key: string; tzs: number; count: number };
 
-const tsh = (n: number) => `TSh ${Math.round(n).toLocaleString("en-US")}`;
+const tsh = (n: number) => `${SITE.currencySymbol} ${Math.round(n).toLocaleString("en-US")}`;
 const short = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));
 const label = (key: string, monthly: boolean) =>
   monthly
