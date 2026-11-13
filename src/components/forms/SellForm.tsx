@@ -226,7 +226,7 @@ export function SellForm({ makes, regions, shop, defaultPhone }: { makes: MakeOp
 
         {step === 2 && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Price (TZS)" error={e("priceTzs")}>
+            <Field label={`Price (${SITE.currency})`} error={e("priceTzs")}>
               <input className="field text-lg tabular-nums" inputMode="numeric" value={v.priceTzs} onChange={(x) => set("priceTzs", x.target.value)} placeholder="e.g. 45,000,000 or 45m" />
               {pricePreview ? <p className="mt-1.5"><span className="plate text-sm">{formatTzs(pricePreview)}</span></p> : null}
             </Field>

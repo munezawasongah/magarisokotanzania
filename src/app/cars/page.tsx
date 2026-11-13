@@ -32,7 +32,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
   if (f.region) canonical.set("region", f.region);
   return {
     title,
-    description: `Browse ${what.toLowerCase() === "cars" ? "new and used cars" : what} for sale${where}. Prices in TZS, verified dealers, chat with sellers on WhatsApp.`,
+    description: `Browse ${what.toLowerCase() === "cars" ? "new and used cars" : what} for sale${where}. Prices in ${SITE.currency}, verified dealers, chat with sellers on WhatsApp.`,
     alternates: { canonical: `/cars${canonical.size ? `?${canonical}` : ""}` },
   };
 }

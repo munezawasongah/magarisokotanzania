@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   const period = (p in PERIODS ? p : "30d") as Period;
   const r = await getRevenueReport(period);
   const lines = [
-    ["Date (EAT)", "From", "For", "Method", "Reference", "Amount TZS"].join(","),
+    ["Date (EAT)", "From", "For", "Method", "Reference", `Amount ${SITE.currency}`].join(","),
     ...r.entries.map((e) => [e.at.toLocaleString("en-GB", { timeZone: SITE.timeZone }), e.who, e.purpose, e.method, e.reference, e.amountTzs].map(csv).join(",")),
     ["", "", "", "", "TOTAL", r.total].join(","),
   ];

@@ -6,6 +6,7 @@ import { VEHICLE_FEATURES } from "@/config/vehicles";
 import { updateListingAction } from "@/server/actions/listing";
 import { formatTzs, parseTzsInput } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { SITE } from "@/config/site";
 
 export type EditableListing = {
   id: string; slug: string; title: string; status: string; priceTzs: number; priceNegotiable: boolean; mileageKm: number;
@@ -32,7 +33,7 @@ export function ListingEditForm({ l }: { l: EditableListing }) {
   function save(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    if (!price || price <= 0) return setMsg({ ok: false, text: "Enter the price in TZS — a listing cannot be published without a price." });
+    if (!price || price <= 0) return setMsg({ ok: false, text: `Enter the price in ${SITE.currency} — a listing cannot be published without a price.` });
     if (v.mileageKm === "") return setMsg({ ok: false, text: "Enter the mileage in km (0 for a brand-new vehicle)." });
     const patch: Record<string, unknown> = {};
     if (price !== l.priceTzs) patch.priceTzs = price;
@@ -56,7 +57,7 @@ export function ListingEditForm({ l }: { l: EditableListing }) {
     <form onSubmit={save} className="space-y-5">
       <section className="panel grid gap-4 p-5 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="price">Price (TZS) *</label>
+          <label className="label" htmlFor="price">Price ({SITE.currency}) *</label>
           <input id="price" className="field text-lg tabular-nums" inputMode="numeric" value={v.priceTzs} onChange={(e) => setV({ ...v, priceTzs: e.target.value })} required />
           {price ? <p className="mt-1.5"><span className="plate text-sm">{formatTzs(price)}</span></p> : null}
           {lower && <p className="mt-1.5 text-xs text-go-700">Buyers who saved this car will get a price-drop alert.</p>}

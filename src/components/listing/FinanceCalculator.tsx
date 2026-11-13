@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/i18n/client";
 import { formatTzs, parseTzsInput } from "@/lib/money";
 import { LOAN_DEFAULTS, monthlyLoanPayment } from "@/lib/import-cost";
+import { SITE } from "@/config/site";
 
 /**
  * Reducing-balance loan estimate. Defaults reflect typical Tanzanian bank
@@ -23,7 +24,7 @@ export function FinanceCalculator({ price }: { price: number }) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="label" htmlFor="fc-price">Price (TZS)</label>
+        <label className="label" htmlFor="fc-price">Price ({SITE.currency})</label>
         <input id="fc-price" className="field tabular-nums" inputMode="numeric" value={customPrice} onChange={(e) => setCustomPrice(e.target.value)} />
       </div>
       <div>

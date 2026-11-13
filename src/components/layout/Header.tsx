@@ -10,7 +10,7 @@ import { HeaderShell } from "./HeaderShell";
 
 /**
  * The site logo (public/brand) exactly as designed (round emblem with the name inside),
- * on a white tile so the navy lettering stays readable on the dark header and footer.
+ * on a white tile so the lettering stays readable on any header or footer colour.
  * Shown at ≥112px so "MAGARISOKO" and "TANZANIA" are legible.
  */
 export function Logo({ className = "h-28 w-28", priority }: { className?: string; priority?: boolean }) {
@@ -43,16 +43,16 @@ export async function Header() {
         </Link>
         <nav className="hidden flex-1 items-center gap-5 lg:flex xl:gap-6" aria-label="Main">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className="whitespace-nowrap text-sm font-medium text-ink-100 transition-colors hover:text-white">{l.label}</Link>
+            <Link key={l.href} href={l.href} className="whitespace-nowrap text-sm font-medium text-chrome-muted transition-colors hover:text-chrome-fg">{l.label}</Link>
           ))}
         </nav>
         <form action="/search" role="search" className="relative hidden w-52 min-w-0 shrink xl:block 2xl:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-300" aria-hidden />
-          <input name="q" className="h-9 w-full rounded-md border border-white/15 bg-white/10 pl-9 pr-3 text-sm text-white placeholder:text-ink-300 focus:border-plate-400 focus:outline-none" placeholder={dict.searchAll.placeholder} aria-label={dict.searchAll.title} />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-chrome-subtle" aria-hidden />
+          <input name="q" className="h-9 w-full rounded-md border border-chrome-line bg-chrome-field pl-9 pr-3 text-sm text-chrome-fg placeholder:text-chrome-subtle focus:border-plate-400 focus:outline-none" placeholder={dict.searchAll.placeholder} aria-label={dict.searchAll.title} />
         </form>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:gap-4">
-          <Link href="/search" className="hidden p-1.5 text-ink-100 hover:text-white min-[400px]:inline-flex xl:hidden" aria-label={dict.searchAll.title}><Search className="h-5 w-5" /></Link>
-          <LanguageSwitcher className="hidden whitespace-nowrap text-ink-100 hover:text-white lg:inline-flex" />
+          <Link href="/search" className="hidden p-1.5 text-chrome-muted hover:text-chrome-fg min-[400px]:inline-flex xl:hidden" aria-label={dict.searchAll.title}><Search className="h-5 w-5" /></Link>
+          <LanguageSwitcher className="hidden whitespace-nowrap text-chrome-muted hover:text-chrome-fg lg:inline-flex" />
           <UserMenu />
           <Link href="/sell" className="btn-plate hidden whitespace-nowrap py-2 lg:inline-flex">{dict.nav.sell}</Link>
           <MobileNav links={links} cta={{ href: "/sell", label: dict.nav.sell }} searchLabel={dict.searchAll.placeholder} />

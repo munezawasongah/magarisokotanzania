@@ -8,7 +8,7 @@ export function MobileNav({ links, cta, searchLabel }: { links: Array<{ href: st
   const [open, setOpen] = useState(false);
   return (
     <div className="lg:hidden">
-      <button type="button" onClick={() => setOpen(true)} aria-label="Menu" className="p-2 text-white"><Menu className="h-6 w-6" /></button>
+      <button type="button" onClick={() => setOpen(true)} aria-label="Menu" className="p-2 text-chrome-fg"><Menu className="h-6 w-6" /></button>
       {open && (
         <div className="fixed inset-0 z-50 flex flex-col bg-ink-950 p-4 text-white" role="dialog" aria-modal="true">
           <div className="flex justify-end"><button type="button" onClick={() => setOpen(false)} aria-label="Close" className="p-2"><X className="h-6 w-6" /></button></div>

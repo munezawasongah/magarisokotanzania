@@ -15,6 +15,7 @@ import { formatTzs } from "@/lib/money";
 import { getMonetisation, listingFeesOn } from "@/lib/settings";
 import { priceBandLinks } from "@/lib/price-bands";
 import { getBrowseCounts } from "@/server/browse-counts";
+import { THEME } from "@/theme";
 
 export const revalidate = 120;
 
@@ -45,34 +46,56 @@ export default async function HomePage() {
   const listNote = paid ? fmt(dict.hero.listFirstFreeNote, { fee: formatTzs(money.privateListingFee), days: SITE.listingLifetimeDays }) : dict.hero.listFreeNote;
   const [carCount, partCount, verifiedCount] = counts;
   const regionMap = new Map(regions.map((r) => [r.id, r]));
+  const search = <HeroSearch makes={makes} regions={regions.map((r) => ({ slug: r.slug, name: r.name }))} bands={bands} />;
+  const stats = (strong: string) => (
+    <>
+      <div><dt className="sr-only">Cars</dt><dd><strong className={`${strong} tabular-nums`}>{carCount.toLocaleString()}</strong> {dict.nav.cars.toLowerCase()}</dd></div>
+      <div><dt className="sr-only">Parts</dt><dd><strong className={`${strong} tabular-nums`}>{partCount.toLocaleString()}</strong> {dict.nav.parts.toLowerCase()}</dd></div>
+      <div><dt className="sr-only">Verified</dt><dd><strong className={`${strong} tabular-nums`}>{verifiedCount}</strong> {locale === "sw" ? "biashara zilizothibitishwa" : "verified businesses"}</dd></div>
+    </>
+  );
 
   return (
     <>
-      {/* Hero: the search IS the hero — a buyer's first action */}
-      <section className="relative overflow-hidden bg-ink-950 pb-14 pt-12 text-white md:pb-20 md:pt-16">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[repeating-linear-gradient(90deg,transparent_0_56px,rgba(255,212,59,.18)_56px_104px)] [mask-image:linear-gradient(to_top,black,transparent)]" />
-        <div className="container relative">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="display max-w-3xl text-4xl leading-[1.05] text-white md:text-6xl">{dict.hero.title}</h1>
-              <p className="mt-4 max-w-xl text-base text-ink-100 md:text-lg">{dict.hero.subtitle}</p>
+      {/* Hero: the search IS the hero — a buyer's first action. Layout follows the country theme. */}
+      {THEME.hero === "night" ? (
+        <section className="relative overflow-hidden bg-ink-950 pb-14 pt-12 text-white md:pb-20 md:pt-16">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[repeating-linear-gradient(90deg,transparent_0_56px,rgba(255,212,59,.18)_56px_104px)] [mask-image:linear-gradient(to_top,black,transparent)]" />
+          <div className="container relative">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h1 className="display max-w-3xl text-4xl leading-[1.05] text-white md:text-6xl">{dict.hero.title}</h1>
+                <p className="mt-4 max-w-xl text-base text-ink-100 md:text-lg">{dict.hero.subtitle}</p>
+              </div>
+              {/* Sellers' door, as visible as the buyers' search: cars on the site are what bring buyers */}
+              <div className="max-w-xs shrink-0 rounded-lg border border-white/15 bg-white/5 p-4">
+                <Link href="/sell?as=private" className="btn-plate w-full"><CarFront className="h-4 w-4" aria-hidden />{listCta}</Link>
+                <p className="mt-2 text-xs text-ink-100">{listNote}</p>
+              </div>
             </div>
-            {/* Sellers' door, as visible as the buyers' search: cars on the site are what bring buyers */}
-            <div className="max-w-xs shrink-0 rounded-lg border border-white/15 bg-white/5 p-4">
-              <Link href="/sell?as=private" className="btn-plate w-full"><CarFront className="h-4 w-4" aria-hidden />{listCta}</Link>
-              <p className="mt-2 text-xs text-ink-100">{listNote}</p>
+            <div className="mt-8 max-w-5xl">{search}</div>
+            <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-2 text-sm text-ink-100">{stats("text-white")}</dl>
+          </div>
+        </section>
+      ) : (
+        <section className="border-b border-line bg-paper pb-12 pt-10 md:pb-16 md:pt-14">
+          <div className="container">
+            <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-end lg:gap-10">
+              <div>
+                <h1 className="display max-w-3xl text-4xl leading-[1.02] text-ink-950 md:text-6xl">{dict.hero.title}</h1>
+                <p className="mt-4 max-w-xl text-base text-ink-700 md:text-lg">{dict.hero.subtitle}</p>
+              </div>
+              {/* Sellers' door, as visible as the buyers' search */}
+              <div className="rounded-lg border-2 border-ink-950 bg-white p-4">
+                <Link href="/sell?as=private" className="btn-plate w-full"><CarFront className="h-4 w-4" aria-hidden />{listCta}</Link>
+                <p className="mt-2 text-xs text-ink-700">{listNote}</p>
+              </div>
             </div>
+            <div className="mt-8 rounded-2xl bg-ink-900 px-3 pb-3 pt-4 sm:px-5 sm:pb-5">{search}</div>
+            <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-2 text-sm text-ink-700">{stats("text-ink-950")}</dl>
           </div>
-          <div className="mt-8 max-w-5xl">
-            <HeroSearch makes={makes} regions={regions.map((r) => ({ slug: r.slug, name: r.name }))} bands={bands} />
-          </div>
-          <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-2 text-sm text-ink-100">
-            <div><dt className="sr-only">Cars</dt><dd><strong className="text-white tabular-nums">{carCount.toLocaleString()}</strong> {dict.nav.cars.toLowerCase()}</dd></div>
-            <div><dt className="sr-only">Parts</dt><dd><strong className="text-white tabular-nums">{partCount.toLocaleString()}</strong> {dict.nav.parts.toLowerCase()}</dd></div>
-            <div><dt className="sr-only">Verified</dt><dd><strong className="text-white tabular-nums">{verifiedCount}</strong> {locale === "sw" ? "biashara zilizothibitishwa" : "verified businesses"}</dd></div>
-          </dl>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Just listed: a compact grid high up, so buyers see real cars before anything else */}
       <section className="container mt-10">

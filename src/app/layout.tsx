@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import "@fontsource-variable/archivo/standard.css";
 import "./globals.css";
+import "@/theme/load";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CompareTray } from "@/components/compare/CompareTray";
 import { Providers } from "@/components/layout/Providers";
 import { getLocale } from "@/i18n/server";
 import { SITE } from "@/config/site";
+import { THEME } from "@/theme";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export const viewport: Viewport = { themeColor: "#0A1426", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: THEME.themeColor, width: "device-width", initialScale: 1 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();

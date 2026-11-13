@@ -5,6 +5,7 @@ import { useI18n } from "@/i18n/client";
 import { enumLabel } from "@/i18n";
 import { PartAuthenticity, PartCategory, PartCondition } from "@/generated/prisma/enums";
 import { ImageUploader, type UploadedImage } from "./ImageUploader";
+import { SITE } from "@/config/site";
 
 type MakeOpt = { id: number; name: string; models: Array<{ id: number; name: string }> };
 export type Fit = { makeId: string; modelId: string; yearFrom: string; yearTo: string; engineCode: string };
@@ -57,7 +58,7 @@ export function PartForm({ makes, regions, businessId, defaultRegionId, initial 
         <div><label className="label">{dict.parts.oem}</label><input className="field uppercase" {...bind("oemNumber")} /></div>
       </div>
       <div className="grid grid-cols-3 gap-2 sm:col-span-2">
-        <div><label className="label">Price (TZS) *</label><input className="field" inputMode="numeric" required placeholder="145,000" {...bind("priceTzs")} /></div>
+        <div><label className="label">Price ({SITE.currency}) *</label><input className="field" inputMode="numeric" required placeholder="145,000" {...bind("priceTzs")} /></div>
         <div><label className="label">Stock</label><input className="field" inputMode="numeric" {...bind("stockQty")} /></div>
         <div><label className="label">Warranty (days)</label><input className="field" inputMode="numeric" {...bind("warrantyDays")} /></div>
       </div>

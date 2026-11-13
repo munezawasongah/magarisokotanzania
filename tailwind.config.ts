@@ -21,6 +21,8 @@ export default {
         line: "#DCE1EA",
         danger: "#C2361F",
         whatsapp: "#25D366",
+        // Header / navigation chrome (light or dark per country)
+        chrome: { DEFAULT: "#0A1426", fg: "#FFFFFF", muted: "#E6EAF1", subtle: "#A9B3C6", line: "rgb(255 255 255 / .15)", field: "rgb(255 255 255 / .1)", accent: "#FFE27A" },
       },
       fontFamily: {
         sans: ['"Archivo Variable"', "system-ui", "sans-serif"],
