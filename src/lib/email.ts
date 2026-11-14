@@ -1,6 +1,7 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { SITE } from "@/config/site";
+import { THEME } from "@/theme";
 
 /**
  * Email drivers (EMAIL_DRIVER):
@@ -37,11 +38,11 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 
 export function renderEmail(m: EmailMessage) {
   const text = [...m.lines, ...(m.action ? [`${m.action.label}: ${m.action.url}`] : []), "", `— ${SITE.fullName}`, `${SITE.supportPhone} · ${SITE.supportEmail}`].join("\n\n");
-  const logo = `${SITE.url.replace(/\/$/, "")}/brand/logo-tile-256.png`;
+  const logo = `${SITE.url.replace(/\/$/, "")}${THEME.logo.email.src}`;
   const html = `<!doctype html><html><body style="margin:0;background:#f3f4f7;font-family:Arial,Helvetica,sans-serif;color:#0b1730">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f7;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden">
-<tr><td style="background:#0b1730;padding:18px;text-align:center"><img src="${logo}" width="88" height="88" alt="${esc(SITE.fullName)}" style="border-radius:14px;background:#fff"></td></tr>
+<tr><td style="background:#0b1730;padding:18px;text-align:center"><img src="${logo}" width="${THEME.logo.email.width}" height="${THEME.logo.email.height}" alt="${esc(SITE.fullName)}" style="border-radius:14px;background:#fff"></td></tr>
 <tr><td style="padding:24px 24px 8px"><h1 style="margin:0 0 12px;font-size:20px">${esc(m.subject)}</h1>
 ${m.lines.map((l) => `<p style="margin:0 0 12px;font-size:15px;line-height:22px">${esc(l)}</p>`).join("")}
 ${m.action ? `<p style="margin:20px 0"><a href="${esc(m.action.url)}" style="display:inline-block;background:#ffd43b;color:#0b1730;font-weight:bold;text-decoration:none;padding:12px 20px;border-radius:8px">${esc(m.action.label)}</a></p>` : ""}

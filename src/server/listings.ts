@@ -19,7 +19,7 @@ import { CAN_LIST_VEHICLES, requireShop } from "./registration";
 /* ═════════════════════════════ card projection ═════════════════════════════ */
 
 export const listingCardSelect = {
-  id: true, slug: true, title: true, priceTzs: true, priceNegotiable: true, year: true, mileageKm: true,
+  id: true, slug: true, title: true, priceTzs: true, priceNegotiable: true, tradeInAccepted: true, financingAvailable: true, year: true, mileageKm: true,
   transmission: true, fuelType: true, bodyType: true, condition: true, steering: true, drivetrain: true, engineCc: true,
   isFeatured: true, featuredUntil: true, isSponsored: true, isImportOnOrder: true, landedCostTzs: true, sellerType: true,
   contactPhone: true, contactWhatsapp: true, publishedAt: true, createdAt: true, status: true, viewCount: true, leadCount: true,
@@ -102,6 +102,8 @@ export function buildListingWhere(f: Partial<ListingFilters>): Prisma.ListingWhe
   if (f.steering?.length) and.push({ steering: { in: f.steering } });
   if (f.drivetrain?.length) and.push({ drivetrain: { in: f.drivetrain } });
   if (f.fourWd) and.push({ drivetrain: { in: ["FOUR_WD", "AWD"] } });
+  if (f.tradeIn) and.push({ tradeInAccepted: true });
+  if (f.financing) and.push({ financingAvailable: true });
   if (f.sellerType?.length) and.push({ sellerType: { in: f.sellerType } });
   if (f.region) and.push({ region: { slug: f.region } });
   if (f.district?.length) and.push({ districtId: { in: f.district } });
@@ -118,6 +120,8 @@ function orderBy(sort: ListingFilters["sort"]): Prisma.ListingOrderByWithRelatio
     case "price_desc": return [{ priceTzs: "desc" }];
     case "year_desc": return [{ year: "desc" }, { publishedAt: "desc" }];
     case "mileage_asc": return [{ mileageKm: "asc" }, { publishedAt: "desc" }];
+    case "year_asc": return [{ year: "asc" }, { publishedAt: "desc" }];
+    case "oldest": return [{ publishedAt: "asc" }];
     default: return [{ isFeatured: "desc" }, { publishedAt: "desc" }];
   }
 }
@@ -356,6 +360,8 @@ export async function createListing(user: SessionUser, input: ListingCreateInput
       features: input.features,
       priceTzs: BigInt(input.priceTzs),
       priceNegotiable: input.priceNegotiable,
+      tradeInAccepted: input.tradeInAccepted,
+      financingAvailable: input.financingAvailable,
       showUsdPrice: input.showUsdPrice,
       isImportOnOrder: input.isImportOnOrder,
       originCountry: input.originCountry,
@@ -421,7 +427,7 @@ export async function renewalNeedsPayment(l: { isFreeListing: boolean }) {
  * risk rises to MEDIUM or HIGH (e.g. big price cut or new phone number after
  * approval) is taken down for review.
  */
-export async function updateListing(user: SessionUser, id: string, patch: { description?: string; priceTzs?: number; priceNegotiable?: boolean; mileageKm?: number; features?: string[]; contactPhone?: string; contactWhatsapp?: string; status?: "ACTIVE" | "SOLD" | "ARCHIVED"; renew?: boolean }) {
+export async function updateListing(user: SessionUser, id: string, patch: { description?: string; priceTzs?: number; priceNegotiable?: boolean; tradeInAccepted?: boolean; financingAvailable?: boolean; mileageKm?: number; features?: string[]; contactPhone?: string; contactWhatsapp?: string; status?: "ACTIVE" | "SOLD" | "ARCHIVED"; renew?: boolean }) {
   const l = await prisma.listing.findUnique({ where: { id } });
   if (!l) throw new ListingError("Not found", 404);
   const staff = user.roles.includes("ADMIN") || user.roles.includes("MODERATOR");
@@ -445,6 +451,8 @@ export async function updateListing(user: SessionUser, id: string, patch: { desc
       description: patch.description,
       priceTzs: patch.priceTzs !== undefined ? BigInt(patch.priceTzs) : undefined,
       priceNegotiable: patch.priceNegotiable,
+      tradeInAccepted: patch.tradeInAccepted,
+      financingAvailable: patch.financingAvailable,
       mileageKm: patch.mileageKm,
       features: patch.features,
       contactPhone: patch.contactPhone,

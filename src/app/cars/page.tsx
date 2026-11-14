@@ -13,6 +13,7 @@ import { QuickFilters } from "@/components/search/QuickFilters";
 import { SaveSearchButton } from "@/components/search/SaveSearchButton";
 import { Suspense } from "react";
 import { SITE } from "@/config/site";
+import { verdictsFor } from "@/server/market";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
@@ -42,6 +43,7 @@ export default async function CarsPage({ searchParams }: { searchParams: SP }) {
   const filters = parseSearchParams(listingFilterSchema, raw);
   const { dict, locale } = await getDictionary();
   const [result, makes, regions] = await Promise.all([searchListings(filters), getMakesWithModels(), getRegionsWithDistricts()]);
+  const verdicts = await verdictsFor(result.items.map((l) => l.id));
   const params = Object.fromEntries(Object.entries(raw).filter(([, v]) => typeof v === "string")) as Record<string, string>;
 
   const make = makes.find((m) => m.slug === filters.make);
@@ -69,7 +71,7 @@ export default async function CarsPage({ searchParams }: { searchParams: SP }) {
         />
         <div>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <QuickFilters params={params} dict={dict} />
+            <QuickFilters params={params} dict={dict} locale={locale} />
             <div className="shrink-0 self-end sm:self-start"><SortSelect options={SORTS} /></div>
           </div>
           {result.items.length === 0 ? (
@@ -79,7 +81,7 @@ export default async function CarsPage({ searchParams }: { searchParams: SP }) {
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {result.items.map((l, i) => <VehicleCard key={l.id} listing={l} dict={dict} locale={locale} priority={i < 3} />)}
+              {result.items.map((l, i) => <VehicleCard key={l.id} listing={l} dict={dict} locale={locale} priority={i < 3} verdict={verdicts[l.id]} />)}
             </div>
           )}
           <Pagination page={result.page} pages={result.pages} basePath="/cars" params={params} dict={dict} />

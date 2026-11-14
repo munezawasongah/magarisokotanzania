@@ -16,6 +16,8 @@ import { getMonetisation, listingFeesOn } from "@/lib/settings";
 import { priceBandLinks } from "@/lib/price-bands";
 import { getBrowseCounts } from "@/server/browse-counts";
 import { THEME } from "@/theme";
+import { browseHref } from "@/lib/browse";
+import { BadgeCheck, LineChart } from "lucide-react";
 
 export const revalidate = 120;
 
@@ -120,7 +122,7 @@ export default async function HomePage() {
         <h2 className="text-xl font-bold">{dict.spec.body}</h2>
         <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {bodyTiles.map((t) => (
-            <Link key={t.body} href={`/cars?body=${t.body}`} className="group overflow-hidden rounded-lg border border-line bg-white">
+            <Link key={t.body} href={browseHref.body(t.body)} className="group overflow-hidden rounded-lg border border-line bg-white">
               <div className="relative aspect-[4/3] overflow-hidden bg-ink-100">
                 <Img src={t.url} alt={enumLabel(dict, "BodyType", t.body)} fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="(max-width: 640px) 33vw, 200px" transform="f_auto,q_auto,c_fill,w_400,h_300" />
               </div>
@@ -129,6 +131,21 @@ export default async function HomePage() {
             </Link>
           ))}
         </div>
+      </section>
+
+      {/* Two shortcuts buyers ask for: a dealer they already know, and what a car should cost */}
+      <section className="container mt-12 grid gap-4 md:grid-cols-2">
+        <form action="/dealers" role="search" className="panel flex flex-col gap-3 p-5">
+          <h2 className="flex items-center gap-2 font-bold"><BadgeCheck className="h-5 w-5 text-go-600" aria-hidden />{locale === "sw" ? "Unamjua muuzaji? Mtafute kwa jina" : "Know the dealer? Find them by name"}</h2>
+          <div className="flex gap-2">
+            <input name="q" className="field min-w-0 flex-1" placeholder={locale === "sw" ? "Jina la muuzaji au yadi" : "Dealer or yard name"} aria-label={locale === "sw" ? "Jina la muuzaji" : "Dealer name"} />
+            <button className="btn-primary shrink-0">{dict.hero.search}</button>
+          </div>
+        </form>
+        <Link href="/car-prices" className="panel group flex flex-col justify-between gap-3 p-5 hover:border-ink-300">
+          <span className="flex items-center gap-2 font-bold"><LineChart className="h-5 w-5 text-ink-700" aria-hidden />{locale === "sw" ? "Gari linapaswa kugharimu kiasi gani?" : "What should you pay?"}</span>
+          <span className="text-sm text-ink-700">{locale === "sw" ? "Bei za kawaida kwa modeli, mwaka na mji — kutoka kwa magari yanayouzwa sasa." : "Typical asking prices by model, year and town, from the cars for sale right now."} <span className="font-semibold underline underline-offset-2 group-hover:no-underline">{locale === "sw" ? "Fungua mwongozo wa bei" : "Open the price guide"}</span></span>
+        </Link>
       </section>
 
       {featured.length > 0 && (
@@ -162,7 +179,7 @@ export default async function HomePage() {
               if (!reg) return null;
               return (
                 <li key={r.regionId}>
-                  <Link href={`/cars?region=${reg.slug}`} className="flex items-center justify-between rounded-md border border-line bg-white px-3 py-2.5 text-sm hover:border-ink-300">
+                  <Link href={browseHref.region(reg.slug)} className="flex items-center justify-between rounded-md border border-line bg-white px-3 py-2.5 text-sm hover:border-ink-300">
                     <span className="font-medium">{reg.name}</span><span className="tabular-nums text-ink-500">{r._count._all}</span>
                   </Link>
                 </li>

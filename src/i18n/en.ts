@@ -23,7 +23,7 @@ export const en = {
     mileageMax: "Max mileage (km)", mileage: "Mileage (km)", conditionLabel: "Condition", sellerType: "Seller", importOnly: "Import-on-order only", fourWdOnly: "4WD / AWD only",
     minClearance: "Min. ground clearance (mm)", terrain: "Terrain & imports", saveSearch: "Save search", any: "Any", prev: "Previous", next: "Next", page: "Page {page} of {pages}",
   },
-  sort: { relevance: "Best match", featured: "Featured first", newest: "Newest", price_asc: "Price: low to high", price_desc: "Price: high to low", year_desc: "Year: newest", mileage_asc: "Lowest mileage" },
+  sort: { relevance: "Best match", featured: "Featured first", newest: "Newest", price_asc: "Price: low to high", price_desc: "Price: high to low", year_desc: "Year: newest", mileage_asc: "Lowest mileage", year_asc: "Year: oldest", oldest: "Listed longest ago" },
   listing: {
     featured: "Featured", sponsored: "Sponsored", verified: "Verified", negotiable: "Negotiable", importOnOrder: "Import on order",
     whatsapp: "WhatsApp", chatWhatsapp: "Chat on WhatsApp", call: "Call", showNumber: "Show number", message: "Send message",

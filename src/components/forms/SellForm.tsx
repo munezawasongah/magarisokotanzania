@@ -31,7 +31,7 @@ function Field({ label, error, children, className }: { label: string; error?: s
 
 /** Four-step listing form: vehicle → details → price & location → photos. */
 export function SellForm({ makes, regions, shop, defaultPhone }: { makes: MakeOpt[]; regions: RegionOpt[]; shop: SellShop; defaultPhone?: string | null }) {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const [step, setStep] = useState(0);
   const [pending, start] = useTransition();
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({});
@@ -43,7 +43,7 @@ export function SellForm({ makes, regions, shop, defaultPhone }: { makes: MakeOp
     makeId: "", modelId: "", year: String(new Date().getFullYear() - 8), trim: "", title: "",
     condition: "FOREIGN_USED", bodyType: "", transmission: "AUTOMATIC", fuelType: "PETROL", steering: "RHD", drivetrain: "",
     engineCc: "", mileageKm: "", colorExterior: "", colorInterior: "", doors: "", seats: "", groundClearanceMm: "", registrationSeries: "", chassisNumber: "",
-    description: "", features: [] as string[], priceTzs: "", priceNegotiable: true, showUsdPrice: false,
+    description: "", features: [] as string[], priceTzs: "", priceNegotiable: true, showUsdPrice: false, tradeInAccepted: false, financingAvailable: false,
     regionId: shop?.regionId ? String(shop.regionId) : "", districtId: shop?.districtId ? String(shop.districtId) : "",
     contactPhone: shop?.phone ?? defaultPhone ?? "", contactWhatsapp: shop?.whatsapp && shop.whatsapp !== shop.phone ? shop.whatsapp : "",
     locationAddress: shop?.address ?? "", latitude: shop?.latitude ?? (null as number | null), longitude: shop?.longitude ?? (null as number | null),
@@ -233,6 +233,8 @@ export function SellForm({ makes, regions, shop, defaultPhone }: { makes: MakeOp
             <div className="flex flex-col justify-end gap-2 pb-1">
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.priceNegotiable} onChange={(x) => set("priceNegotiable", x.target.checked)} />{dict.listing.negotiable}</label>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.showUsdPrice} onChange={(x) => set("showUsdPrice", x.target.checked)} />Show approximate USD price</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.tradeInAccepted} onChange={(x) => set("tradeInAccepted", x.target.checked)} />{locale === "sw" ? "Napokea gari kama sehemu ya malipo (trade-in)" : "Trade-in accepted"}</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.financingAvailable} onChange={(x) => set("financingAvailable", x.target.checked)} />{locale === "sw" ? "Naweza kupanga mkopo / malipo kwa awamu" : "Financing available (loan or hire purchase)"}</label>
             </div>
             <Field label={dict.spec.region} error={e("regionId")}>
               <select className="field" value={v.regionId} onChange={(x) => { set("regionId", x.target.value); set("districtId", ""); }}>

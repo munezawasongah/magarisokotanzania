@@ -28,6 +28,13 @@ import { ViewTracker } from "@/components/listing/ViewTracker";
 import { FavoriteButton } from "@/components/listing/FavoriteButton";
 import { ReportButton } from "@/components/listing/ReportButton";
 import { VehicleCard } from "@/components/listing/VehicleCard";
+import { PriceCheck, RunningCosts, PartsThatFit } from "@/components/listing/CarInsights";
+import { PriceVerdict } from "@/components/market/PriceVerdict";
+import { priceChecks, verdictsFor } from "@/server/market";
+import { countFittingParts } from "@/server/parts";
+import { getRunningCosts } from "@/lib/settings";
+import { runningCostEstimate } from "@/lib/running-costs";
+import { BadgePercent, Repeat } from "lucide-react";
 
 import { SITE } from "@/config/site";
 type Params = Promise<{ slug: string }>;
@@ -52,13 +59,19 @@ export default async function ListingPage({ params }: { params: Params }) {
   if (!l) notFound();
   const { dict, locale } = await getDictionary();
 
-  const [similar, rate, fav, inspectors, lenders] = await Promise.all([
+  const [similar, rate, fav, inspectors, lenders, checks, rc, partsCount] = await Promise.all([
     getSimilarListings(l),
     l.isImportOnOrder || l.showUsdPrice ? getUsdTzsRate() : Promise.resolve(0),
     viewer ? prisma.favorite.findUnique({ where: { userId_listingId: { userId: viewer.id, listingId: l.id } } }) : null,
     l.status === "ACTIVE" ? inspectionProvidersFor({ regionId: l.regionId, businessId: l.businessId }) : Promise.resolve([]),
     financeProviders(l.regionId),
+    priceChecks([l.id]),
+    getRunningCosts(),
+    countFittingParts(l.make.slug, l.model.slug, l.year),
   ]);
+  const check = checks.get(l.id) ?? null;
+  const similarVerdicts = await verdictsFor(similar.slice(0, 8).map((s) => s.id));
+  const running = runningCostEstimate({ priceTzs: toNum(l.priceTzs), engineCc: l.engineCc, fuelType: l.fuelType, bodyType: l.bodyType }, rc);
   const monthlyFrom = estimateMonthly(toNum(l.priceTzs));
 
   const url = absoluteUrl(`/cars/${l.slug}`);
@@ -117,7 +130,7 @@ export default async function ListingPage({ params }: { params: Params }) {
 
       <nav className="mb-4 text-xs text-ink-500" aria-label="Breadcrumb">
         <Link href="/cars" className="hover:underline">{dict.nav.cars}</Link> /{" "}
-        <Link href={`/cars?make=${l.make.slug}`} className="hover:underline">{l.make.name}</Link> /{" "}
+        <Link href={`/cars/make/${l.make.slug}`} className="hover:underline">{l.make.name}</Link> /{" "}
         <Link href={`/cars?make=${l.make.slug}&model=${l.model.slug}`} className="hover:underline">{l.model.name}</Link>
       </nav>
 
@@ -137,6 +150,8 @@ export default async function ListingPage({ params }: { params: Params }) {
               {l.isImportOnOrder && <Badge tone="ink"><Ship className="h-3 w-3" />{dict.listing.importOnOrder}</Badge>}
               <Badge tone={l.condition === "NEW" ? "go" : "muted"}>{enumLabel(dict, "VehicleCondition", l.condition)}</Badge>
               <Badge tone="ink">{enumLabel(dict, "SellerType", l.sellerType)}</Badge>
+              {l.tradeInAccepted && <Badge tone="go"><Repeat className="h-3 w-3" />{locale === "sw" ? "Anapokea trade-in" : "Trade-in accepted"}</Badge>}
+              {l.financingAvailable && <Badge tone="go"><BadgePercent className="h-3 w-3" />{locale === "sw" ? "Mkopo unapatikana" : "Financing available"}</Badge>}
             </div>
             <h1 className="display text-2xl md:text-4xl">{l.title}</h1>
             <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-700">
@@ -147,6 +162,8 @@ export default async function ListingPage({ params }: { params: Params }) {
             </ul>
             <div className="lg:hidden"><PriceTag value={l.priceTzs} size="lg" /></div>
           </header>
+
+          <PriceCheck check={check} car={{ make: l.make.name, model: l.model.name, makeSlug: l.make.slug, modelSlug: l.model.slug, condition: l.condition, price: toNum(l.priceTzs) }} locale={locale} />
 
           <section>
             <h2 className="mb-3 text-lg font-bold">{dict.listing.specs}</h2>
@@ -202,6 +219,10 @@ export default async function ListingPage({ params }: { params: Params }) {
             </section>
           )}
 
+          <RunningCosts est={running} fuelLabel={enumLabel(dict, "FuelType", l.fuelType === "DIESEL" ? "DIESEL" : "PETROL")} fuelNote={rc.fuelNote} insurancePct={rc.insurancePct} locale={locale} />
+
+          <PartsThatFit count={partsCount} href={`/parts?make=${l.make.slug}&model=${l.model.slug}&year=${l.year}`} label={`${l.make.name} ${l.model.name}`} locale={locale} />
+
           <section id="finance" className="panel scroll-mt-28 p-5">
             <h2 className="mb-4 text-lg font-bold">{dict.listing.financeTitle}</h2>
             <FinanceCalculator price={toNum(l.priceTzs)} />
@@ -215,6 +236,7 @@ export default async function ListingPage({ params }: { params: Params }) {
           <div className="panel space-y-4 p-5">
             <div>
               <PriceTag value={l.priceTzs} size="lg" />
+              {check && <div className="mt-2"><PriceVerdict verdict={check.verdict} locale={locale} /></div>}
               <a href="#finance" className="mt-1.5 block text-xs font-semibold text-ink-700 underline-offset-2 hover:underline">{fmt(dict.finance.from, { amount: formatTzs(monthlyFrom) })}</a>
               <p className="mt-2 text-xs text-ink-500">
                 {l.priceNegotiable ? dict.listing.negotiable : ""}
@@ -278,7 +300,7 @@ export default async function ListingPage({ params }: { params: Params }) {
       {similar.length > 0 && (
         <section className="mt-14">
           <h2 className="mb-4 text-xl font-bold">{dict.listing.similar}</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{similar.slice(0, 8).map((s) => <VehicleCard key={s.id} listing={s} dict={dict} locale={locale} />)}</div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{similar.slice(0, 8).map((s) => <VehicleCard key={s.id} listing={s} dict={dict} locale={locale} verdict={similarVerdicts[s.id]} />)}</div>
         </section>
       )}
 

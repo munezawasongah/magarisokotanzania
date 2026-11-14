@@ -62,3 +62,17 @@ export const LEVY_LABELS = {
 
 /** Typical bank / asset-finance vehicle loan, used for "from … / month" estimates. */
 export const LOAN_DEFAULTS = { depositPct: 30, ratePct: 17, months: 36, roundTo: 1_000 } as const;
+
+/**
+ * Running-cost estimate shown on every car page (labelled as an estimate).
+ * Fuel: EWURA cap prices, Dar es Salaam. Admins update these in Admin → Settings.
+ */
+export const RUNNING_COST_DEFAULTS = {
+  petrolPerLitre: 3_900,
+  dieselPerLitre: 4_080,
+  /** Comprehensive cover, % of the car's value per year */
+  insurancePct: 3.5,
+  /** Distance a typical owner drives per month */
+  kmPerMonth: 1_500,
+  fuelNote: "EWURA cap price, Dar es Salaam",
+};

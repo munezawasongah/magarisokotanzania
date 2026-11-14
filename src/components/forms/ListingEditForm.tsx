@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { SITE } from "@/config/site";
 
 export type EditableListing = {
-  id: string; slug: string; title: string; status: string; priceTzs: number; priceNegotiable: boolean; mileageKm: number;
+  id: string; slug: string; title: string; status: string; priceTzs: number; priceNegotiable: boolean; tradeInAccepted: boolean; financingAvailable: boolean; mileageKm: number;
   description: string; features: string[]; contactPhone: string; contactWhatsapp: string;
 };
 
@@ -24,7 +24,7 @@ export function ListingEditForm({ l }: { l: EditableListing }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [v, setV] = useState({
-    priceTzs: l.priceTzs.toLocaleString("en-US"), priceNegotiable: l.priceNegotiable, mileageKm: String(l.mileageKm),
+    priceTzs: l.priceTzs.toLocaleString("en-US"), priceNegotiable: l.priceNegotiable, tradeInAccepted: l.tradeInAccepted, financingAvailable: l.financingAvailable, mileageKm: String(l.mileageKm),
     description: l.description, features: l.features, contactPhone: l.contactPhone, contactWhatsapp: l.contactWhatsapp === l.contactPhone ? "" : l.contactWhatsapp,
   });
   const price = parseTzsInput(v.priceTzs);
@@ -38,6 +38,8 @@ export function ListingEditForm({ l }: { l: EditableListing }) {
     const patch: Record<string, unknown> = {};
     if (price !== l.priceTzs) patch.priceTzs = price;
     if (v.priceNegotiable !== l.priceNegotiable) patch.priceNegotiable = v.priceNegotiable;
+    if (v.tradeInAccepted !== l.tradeInAccepted) patch.tradeInAccepted = v.tradeInAccepted;
+    if (v.financingAvailable !== l.financingAvailable) patch.financingAvailable = v.financingAvailable;
     if (Number(v.mileageKm) !== l.mileageKm) patch.mileageKm = Number(v.mileageKm);
     if (v.description.trim() !== l.description) patch.description = v.description.trim();
     if (v.features.join("|") !== l.features.join("|")) patch.features = v.features;
@@ -67,6 +69,8 @@ export function ListingEditForm({ l }: { l: EditableListing }) {
           <input id="km" className="field tabular-nums" inputMode="numeric" value={v.mileageKm} onChange={(e) => setV({ ...v, mileageKm: e.target.value.replace(/\D/g, "") })} required />
         </div>
         <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={v.priceNegotiable} onChange={(e) => setV({ ...v, priceNegotiable: e.target.checked })} />{dict.listing.negotiable}</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.tradeInAccepted} onChange={(e) => setV({ ...v, tradeInAccepted: e.target.checked })} />Trade-in accepted</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.financingAvailable} onChange={(e) => setV({ ...v, financingAvailable: e.target.checked })} />Financing available</label>
         <div>
           <label className="label" htmlFor="ph">{dict.inquiry.phone}</label>
           <input id="ph" className="field" inputMode="tel" value={v.contactPhone} onChange={(e) => setV({ ...v, contactPhone: e.target.value })} required />

@@ -25,7 +25,7 @@ export const sw: Dictionary = {
     mileageMax: "Kilomita za juu", mileage: "Kilomita (km)", conditionLabel: "Hali", sellerType: "Muuzaji", importOnly: "Ya kuagiza tu", fourWdOnly: "4WD / AWD tu",
     minClearance: "Kimo cha chini (mm)", terrain: "Barabara na uagizaji", saveSearch: "Hifadhi utafutaji", any: "Yoyote", prev: "Nyuma", next: "Mbele", page: "Ukurasa {page} kati ya {pages}",
   },
-  sort: { relevance: "Inayolingana zaidi", featured: "Maalum kwanza", newest: "Mapya zaidi", price_asc: "Bei: chini kwenda juu", price_desc: "Bei: juu kwenda chini", year_desc: "Mwaka: mpya zaidi", mileage_asc: "Kilomita chache" },
+  sort: { relevance: "Inayolingana zaidi", featured: "Maalum kwanza", newest: "Mapya zaidi", price_asc: "Bei: chini kwenda juu", price_desc: "Bei: juu kwenda chini", year_desc: "Mwaka: mpya zaidi", mileage_asc: "Kilomita chache", year_asc: "Mwaka: wa zamani zaidi", oldest: "Yaliyowekwa zamani zaidi" },
   listing: {
     featured: "Maalum", sponsored: "Udhamini", verified: "Imethibitishwa", negotiable: "Bei maelewano", importOnOrder: "Kuagiza",
     whatsapp: "WhatsApp", chatWhatsapp: "Ongea WhatsApp", call: "Piga simu", showNumber: "Onyesha namba", message: "Tuma ujumbe",

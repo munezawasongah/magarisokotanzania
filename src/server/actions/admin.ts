@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/session";
 import { moderateListing, verifyBusiness } from "@/server/admin";
-import { setImportTaxRules, setMonetisation } from "@/lib/settings";
+import { setImportTaxRules, setMonetisation, setRunningCosts } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_IMPORT_TAX_RULES } from "@/config/import-tax";
 import { redirect } from "next/navigation";
@@ -56,6 +56,8 @@ const rulesSchema = z.object({
   registrationTzs: z.coerce.number().int().min(0), portAndShippingLineTzs: z.coerce.number().int().min(0), clearingAgentTzs: z.coerce.number().int().min(0),
   updatedNote: z.string().max(300),
   fxRate: z.coerce.number().min(0).optional(),
+  petrolPerLitre: z.coerce.number().min(0), dieselPerLitre: z.coerce.number().min(0),
+  insurancePct: z.coerce.number().min(0).max(30), kmPerMonth: z.coerce.number().int().min(0).max(20000), fuelNote: z.string().max(120),
 });
 
 export async function saveSettingsAction(formData: FormData) {
@@ -70,6 +72,7 @@ export async function saveSettingsAction(formData: FormData) {
     ageExcise: d.ageExcise.map((b, i) => ({ ...b, pct: [v.age1, v.age2, v.age3][i] ?? b.pct })),
     registrationTzs: v.registrationTzs, portAndShippingLineTzs: v.portAndShippingLineTzs, clearingAgentTzs: v.clearingAgentTzs, updatedNote: v.updatedNote,
   });
+  await setRunningCosts({ petrolPerLitre: v.petrolPerLitre, dieselPerLitre: v.dieselPerLitre, insurancePct: v.insurancePct, kmPerMonth: v.kmPerMonth, fuelNote: v.fuelNote });
   if (v.fxRate && v.fxRate > SITE.amounts.fxSanityMin) await prisma.exchangeRate.create({ data: { rate: v.fxRate, source: "manual", quote: SITE.currency } });
   await prisma.auditLog.create({ data: { actorId: u.id, action: "settings.importTaxRules", entityType: "SiteSetting", entityId: "importTaxRules" } });
   revalidatePath("/admin/settings");

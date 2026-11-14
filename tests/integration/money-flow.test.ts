@@ -319,3 +319,40 @@ describe("pricing model: free while launching, then first listings free and a fe
     expect((await prisma.sellerRegistration.findUniqueOrThrow({ where: { userId: shopOwner.id } })).status).toBe("APPROVED");
   });
 });
+
+describe("market prices: price check against similar live cars", () => {
+  it("rates a car good / fair / high against same-model cars within a year, and needs enough of them", async () => {
+    const { priceChecks, verdictFor } = await import("@/server/market");
+    const prices = [3_000_000, 3_100_000, 3_200_000, 3_300_000, 3_400_000, 2_500_000];
+    const ids: string[] = [];
+    for (const [i, p] of prices.entries()) {
+      const l = await prisma.listing.create({
+        data: { slug: `mkt-${i}`, title: `Harrier ${i}`, description: "Market test car", status: "ACTIVE", sellerId: dealer.id, contactPhone: dealer.phone ?? "+255700000001", makeId, modelId, year: 2016 + (i % 2), condition: "FOREIGN_USED", bodyType: "SUV", transmission: "AUTOMATIC", fuelType: "PETROL", mileageKm: 70_000, priceTzs: BigInt(p), regionId },
+      });
+      ids.push(l.id);
+    }
+    const checks = await priceChecks(ids);
+    const cheap = checks.get(ids[5])!; // 2.5M against others around 3.2M
+    expect(cheap.verdict).toBe("good");
+    expect(cheap.count).toBeGreaterThanOrEqual(5);
+    expect(cheap.median).toBeGreaterThan(3_000_000);
+    expect(verdictFor(3_200_000, 3_200_000)).toBe("fair");
+    expect(verdictFor(4_000_000, 3_200_000)).toBe("high");
+
+    // a lone model with no comparables gets no verdict at all
+    const other = await prisma.vehicleModel.create({ data: { name: "Crown", slug: "crown-mkt", makeId, defaultBodyType: "SEDAN" } });
+    const lone = await prisma.listing.create({ data: { slug: "mkt-lone", title: "Crown", description: "x", status: "ACTIVE", sellerId: dealer.id, contactPhone: dealer.phone ?? "+255700000001", makeId, modelId: other.id, year: 2015, condition: "FOREIGN_USED", bodyType: "SEDAN", transmission: "AUTOMATIC", fuelType: "PETROL", mileageKm: 90_000, priceTzs: 2_000_000n, regionId } });
+    expect((await priceChecks([lone.id])).has(lone.id)).toBe(false);
+    await prisma.listing.deleteMany({ where: { slug: { startsWith: "mkt-" } } });
+  });
+
+  it("estimates running costs from engine size and fuel", async () => {
+    const { estimateKmPerLitre, runningCostEstimate } = await import("@/lib/running-costs");
+    expect(estimateKmPerLitre(1500, "PETROL", "SEDAN")).toBe(14.5);
+    expect(estimateKmPerLitre(2500, "DIESEL", "PICKUP")).toBeCloseTo(10 * 0.88 * 1.2, 1);
+    expect(estimateKmPerLitre(null, "ELECTRIC", "SEDAN")).toBeNull();
+    const est = runningCostEstimate({ priceTzs: 2_000_000, engineCc: 1500, fuelType: "PETROL", bodyType: "SEDAN" }, { petrolPerLitre: 200, dieselPerLitre: 200, insurancePct: 4, kmPerMonth: 1450, fuelNote: "" });
+    expect(est.fuelPerMonth).toBe(20_000); // 1,450 km ÷ 14.5 km/l × 200
+    expect(est.insurancePerYear).toBe(80_000);
+  });
+});

@@ -31,9 +31,15 @@ export async function searchServiceProviders(f: { category?: ServiceCategory; re
   return { items, total, pages: Math.max(1, Math.ceil(total / 24)), page };
 }
 
-export async function listDealers(region?: string) {
+/** Dealers, yards and importers; `q` finds them by business name (any part of it, any case). */
+export async function listDealers(region?: string, q?: string) {
+  const name = q?.trim().slice(0, 80);
   return prisma.business.findMany({
-    where: { isActive: true, type: { in: ["DEALERSHIP", "CAR_YARD", "IMPORTER"] }, ...(region ? { region: { slug: region } } : {}) },
+    where: {
+      isActive: true, type: { in: ["DEALERSHIP", "CAR_YARD", "IMPORTER"] },
+      ...(region ? { region: { slug: region } } : {}),
+      ...(name ? { name: { contains: name, mode: "insensitive" as const } } : {}),
+    },
     include: { region: true, _count: { select: { listings: { where: { status: "ACTIVE" } } } } },
     orderBy: [{ verifiedAt: { sort: "desc", nulls: "last" } }, { name: "asc" }],
     take: 200,

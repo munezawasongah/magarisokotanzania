@@ -11,15 +11,18 @@ import { enumLabel, type Dictionary, type Locale } from "@/i18n";
 import { listingWhatsappMessage } from "@/lib/whatsapp";
 import { absoluteUrl, formatKm } from "@/lib/utils";
 import type { Serialized } from "@/lib/json";
+import type { Verdict } from "@/server/market";
+import { PriceVerdict } from "@/components/market/PriceVerdict";
 
 type Card = ListingCardRow | Serialized<ListingCardRow>;
 
 /**
- * Responsive vehicle card: photo, plate-style TZS price, key specs, location tag
+ * Responsive vehicle card: photo, plate-style price (with a price-check label when there are
+ * enough similar cars), key specs, location tag
  * and a one-tap WhatsApp inquiry pre-filled with the listing title and link.
  * Horizontal on wide list views (`layout="row"`), stacked in grids.
  */
-export function VehicleCard({ listing: l, dict, locale, layout = "grid", priority }: { listing: Card; dict: Dictionary; locale: Locale; layout?: "grid" | "row"; priority?: boolean }) {
+export function VehicleCard({ listing: l, dict, locale, layout = "grid", priority, verdict }: { listing: Card; dict: Dictionary; locale: Locale; layout?: "grid" | "row"; priority?: boolean; verdict?: Verdict }) {
   const url = `/cars/${l.slug}`;
   const featured = l.isFeatured && (!l.featuredUntil || new Date(l.featuredUntil) > new Date());
   const cover = l.images[0]?.url ?? "/placeholders/sedan.svg";
@@ -49,7 +52,7 @@ export function VehicleCard({ listing: l, dict, locale, layout = "grid", priorit
 
         <div className="flex items-end justify-between gap-2">
           <PriceTag value={l.priceTzs} compact={layout === "grid"} />
-          {l.priceNegotiable && <span className="text-2xs text-ink-500">{dict.listing.negotiable}</span>}
+          {verdict ? <PriceVerdict verdict={verdict} locale={locale} /> : l.priceNegotiable && <span className="text-2xs text-ink-500">{dict.listing.negotiable}</span>}
         </div>
 
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-ink-700">

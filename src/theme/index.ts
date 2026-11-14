@@ -9,4 +9,10 @@ export const THEME = {
   hero: "night" as "night" | "day",
   /** Thin national-colour band across the top of the header; empty = none. */
   headerBand: [] as string[],
+  /** Logo files in public/brand. "tile" = square emblem; "wide" = landscape wordmark logo. */
+  logo: {
+    header: { src: "/brand/logo-tile-512.png", width: 512, height: 512, shape: "tile" as "tile" | "wide" },
+    full: { src: "/brand/logo-full.png", width: 405, height: 397 },
+    email: { src: "/brand/logo-tile-256.png", width: 88, height: 88 },
+  },
 };

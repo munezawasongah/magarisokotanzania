@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "./prisma";
-import { DEFAULT_IMPORT_TAX_RULES, type ImportTaxRules } from "@/config/import-tax";
+import { DEFAULT_IMPORT_TAX_RULES, RUNNING_COST_DEFAULTS, type ImportTaxRules } from "@/config/import-tax";
 import { MONETISATION_DEFAULTS } from "@/config/site";
 
 export async function getImportTaxRules(): Promise<ImportTaxRules> {
@@ -14,6 +14,19 @@ export async function setImportTaxRules(rules: ImportTaxRules) {
     create: { key: "importTaxRules", value: rules },
     update: { value: rules },
   });
+}
+
+/* ─────────── running-cost estimate (fuel prices, insurance) ─────────── */
+
+export type RunningCosts = typeof RUNNING_COST_DEFAULTS;
+
+export async function getRunningCosts(): Promise<RunningCosts> {
+  const row = await prisma.siteSetting.findUnique({ where: { key: "runningCosts" } }).catch(() => null);
+  return { ...RUNNING_COST_DEFAULTS, ...((row?.value as Partial<RunningCosts> | undefined) ?? {}) };
+}
+
+export async function setRunningCosts(v: RunningCosts) {
+  await prisma.siteSetting.upsert({ where: { key: "runningCosts" }, create: { key: "runningCosts", value: v }, update: { value: v } });
 }
 
 /* ─────────── body-type photos (home page tiles) ─────────── */

@@ -14,7 +14,7 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "db:setup": "prisma migrate deploy && prisma db seed",
+    "db:setup": "prisma migrate deploy && prisma db seed && tsx scripts/fetch-body-photos.ts",
     "db:cleanup": "tsx prisma/cleanup.ts",
     "photos:body-types": "tsx scripts/fetch-body-photos.ts",
     "test": "vitest run",

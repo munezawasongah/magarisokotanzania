@@ -190,3 +190,19 @@ export async function setPartStatus(user: SessionUser, id: string, patch: { stat
     select: { id: true, slug: true, status: true, stockQty: true },
   });
 }
+
+/** How many live parts fit this car (make, then the model or all models, inside the year range). */
+export async function countFittingParts(makeSlug: string, modelSlug: string, year: number) {
+  return prisma.sparePart.count({
+    where: {
+      status: "ACTIVE",
+      fitments: {
+        some: {
+          make: { slug: makeSlug },
+          OR: [{ model: { slug: modelSlug } }, { modelId: null }],
+          AND: [{ OR: [{ yearFrom: null }, { yearFrom: { lte: year } }] }, { OR: [{ yearTo: null }, { yearTo: { gte: year } }] }],
+        },
+      },
+    },
+  });
+}

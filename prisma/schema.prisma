@@ -606,6 +606,8 @@ model Listing {
   // pricing
   priceTzs        BigInt
   priceNegotiable Boolean  @default(true)
+  tradeInAccepted    Boolean @default(false) // seller takes a car in part-exchange
+  financingAvailable Boolean @default(false) // seller can arrange a loan / asset finance
   showUsdPrice    Boolean  @default(false)
 
   // import-on-order (dealers/importers only)
@@ -668,6 +670,7 @@ model Listing {
 
   @@index([status, isFeatured, publishedAt])
   @@index([status, makeId, modelId])
+  @@index([status, modelId, year])
   @@index([status, priceTzs])
   @@index([status, year])
   @@index([status, regionId])

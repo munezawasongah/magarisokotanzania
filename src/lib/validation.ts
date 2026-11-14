@@ -71,6 +71,8 @@ export const listingCreateSchema = z
     features: z.array(z.string().max(60)).max(60).default([]),
     priceTzs: tzs.refine((n) => n >= SITE.amounts.vehicleMin, `Enter the price in ${SITE.currency} — vehicles cannot be listed without a price`),
     priceNegotiable: z.coerce.boolean().default(true),
+    tradeInAccepted: z.coerce.boolean().default(false),
+    financingAvailable: z.coerce.boolean().default(false),
     showUsdPrice: z.coerce.boolean().default(false),
     regionId: z.coerce.number().int().positive(),
     districtId: z.coerce.number().int().positive().optional(),
@@ -103,6 +105,8 @@ export const listingUpdateSchema = z.object({
   description: z.string().trim().min(20).max(5000).optional(),
   priceTzs: tzs.optional(),
   priceNegotiable: z.boolean().optional(),
+  tradeInAccepted: z.boolean().optional(),
+  financingAvailable: z.boolean().optional(),
   mileageKm: optionalInt(0, 2_000_000),
   features: z.array(z.string().max(60)).max(60).optional(),
   contactPhone: tzPhone.optional(),
@@ -114,7 +118,7 @@ export const listingUpdateSchema = z.object({
 
 /* ─────────── search filters (from URL search params) ─────────── */
 
-export const SORTS = ["featured", "newest", "price_asc", "price_desc", "year_desc", "mileage_asc"] as const;
+export const SORTS = ["featured", "newest", "price_asc", "price_desc", "year_desc", "year_asc", "mileage_asc", "oldest"] as const;
 export type SortKey = (typeof SORTS)[number];
 
 const csvEnum = <T extends Record<string, string>>(e: T) =>
@@ -146,6 +150,8 @@ export const listingFilterSchema = z.object({
   region: z.string().trim().optional(), // slug
   district: csvInt,
   fourWd: flag,
+  tradeIn: flag,
+  financing: flag,
   importOnly: flag,
   minClearance: optNum,
   business: z.string().optional(), // business slug (showroom)

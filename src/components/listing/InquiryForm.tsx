@@ -14,11 +14,20 @@ const TYPES_FOR = {
 } as const satisfies Record<string, readonly InquiryType[]>;
 
 export function InquiryForm({ target, defaultName, defaultPhone, serviceBusiness }: { target: { listingId?: string; partId?: string; businessId?: string }; defaultName?: string; defaultPhone?: string; serviceBusiness?: boolean }) {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const kind = target.listingId ? "listing" : target.partId ? "part" : "business";
   const types: readonly InquiryType[] = kind === "business" && !serviceBusiness ? ["GENERAL", "SERVICE_BOOKING"] : TYPES_FOR[kind];
   const [type, setType] = useState<InquiryType>(types[0]);
   const defaultMessage = kind === "listing" ? dict.inquiry.defaultMessage : kind === "part" ? dict.inquiry.defaultMessagePart : serviceBusiness ? dict.inquiry.defaultMessageService : dict.inquiry.defaultMessageShop;
+  const [msg, setMsg] = useState(defaultMessage);
+  const sw = locale === "sw";
+  // One-tap starter questions for car enquiries; tapping adds the question to the message.
+  const quick = kind === "listing"
+    ? (sw
+      ? ["Bado linapatikana?", "Naweza kuliona wiki hii?", "Bei inaweza kupunguzwa?", "Limewahi kupata ajali?", "Nyaraka za usajili ziko tayari?"]
+      : ["Is it still available?", "Can I view it this week?", "Is the price negotiable?", "Has it ever been in an accident?", "Are the registration papers ready?"])
+    : [];
+  const addQuestion = (q: string) => setMsg((m) => (m.includes(q) ? m : `${m.trim()}${m.trim() ? "\n" : ""}${q}`));
   const [state, action, pending] = useActionState<FormState, FormData>(submitInquiryAction, { ok: false });
   const err = (k: string) => state.fieldErrors?.[k]?.[0];
 
@@ -70,7 +79,12 @@ export function InquiryForm({ target, defaultName, defaultPhone, serviceBusiness
       )}
       <div>
         <label className="label" htmlFor="inq-msg">{dict.inquiry.message}</label>
-        <textarea id="inq-msg" name="message" className="field min-h-24" defaultValue={defaultMessage} required aria-invalid={!!err("message")} />
+        {quick.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5" aria-label={sw ? "Maswali ya haraka" : "Quick questions"}>
+            {quick.map((q) => <button key={q} type="button" onClick={() => addQuestion(q)} className="chip hover:border-ink-700" aria-pressed={msg.includes(q)}>{q}</button>)}
+          </div>
+        )}
+        <textarea id="inq-msg" name="message" className="field min-h-24" value={msg} onChange={(e) => setMsg(e.target.value)} required aria-invalid={!!err("message")} />
         {err("message") && <p className="mt-1 text-xs text-danger">{err("message")}</p>}
       </div>
       {state.message && !state.ok && <p className="text-sm text-danger" role="alert">{state.message}</p>}

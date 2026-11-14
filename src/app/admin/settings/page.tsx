@@ -1,17 +1,17 @@
-import { getImportTaxRules } from "@/lib/settings";
+import { getImportTaxRules, getRunningCosts } from "@/lib/settings";
 import { getUsdTzsRate } from "@/lib/fx";
 import { saveSettingsAction } from "@/server/actions/admin";
 import { SITE } from "@/config/site";
 import { LEVY_LABELS } from "@/config/import-tax";
 
 export default async function SettingsPage() {
-  const [r, rate] = await Promise.all([getImportTaxRules(), getUsdTzsRate()]);
+  const [r, rate, rc] = await Promise.all([getImportTaxRules(), getUsdTzsRate(), getRunningCosts()]);
   const num = (name: string, label: string, value: number, step = "0.1") => (
     <div><label className="label" htmlFor={name}>{label}</label><input id={name} name={name} type="number" step={step} defaultValue={value} className="field tabular-nums" /></div>
   );
   return (
     <form action={saveSettingsAction} className="max-w-3xl space-y-6">
-      <h1 className="display text-2xl">Import tax rules & FX</h1>
+      <h1 className="display text-2xl">Import tax, FX & running costs</h1>
       <p className="text-sm text-ink-500">Used for the landed-cost estimate on every import-on-order listing. Update when the Finance Act or {SITE.taxAuthority} rates change.</p>
       <fieldset className="panel grid gap-4 p-5 sm:grid-cols-4">
         <legend className="px-1 font-semibold">Duties & levies (%)</legend>
@@ -33,6 +33,13 @@ export default async function SettingsPage() {
         <legend className="px-1 font-semibold">Notes & exchange rate</legend>
         <div><label className="label" htmlFor="updatedNote">Note shown to staff</label><input id="updatedNote" name="updatedNote" defaultValue={r.updatedNote} className="field" /></div>
         {num("fxRate", `USD → ${SITE.currency} (current ${rate.toFixed(0)}) — set to override`, Math.round(rate), "1")}
+      </fieldset>
+      <fieldset className="panel grid gap-4 p-5 sm:grid-cols-3">
+        <legend className="px-1 font-semibold">Running-cost estimate on car pages</legend>
+        {num("petrolPerLitre", `Petrol (${SITE.currency}/litre)`, rc.petrolPerLitre, "0.01")}{num("dieselPerLitre", `Diesel (${SITE.currency}/litre)`, rc.dieselPerLitre, "0.01")}{num("insurancePct", "Comprehensive insurance (% of value / year)", rc.insurancePct)}
+        {num("kmPerMonth", "Typical distance (km / month)", rc.kmPerMonth, "100")}
+        <div className="sm:col-span-2"><label className="label" htmlFor="fuelNote">Fuel price source shown to buyers</label><input id="fuelNote" name="fuelNote" defaultValue={rc.fuelNote} className="field" /></div>
+        <p className="text-xs text-ink-500 sm:col-span-3">Update the fuel prices each month when the regulator publishes new pump prices.</p>
       </fieldset>
       <button className="btn-primary">Save settings</button>
     </form>

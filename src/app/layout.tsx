@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   authors: [{ name: SITE.company }],
   publisher: SITE.company,
   alternates: { canonical: "/" },
-  openGraph: { type: "website", siteName: SITE.fullName, locale: `en_${SITE.country}`, alternateLocale: [`sw_${SITE.country}`], images: [{ url: "/brand/logo-full.png", width: 398, height: 390, alt: SITE.fullName }] },
+  openGraph: { type: "website", siteName: SITE.fullName, locale: `en_${SITE.country}`, alternateLocale: [`sw_${SITE.country}`], images: [{ url: THEME.logo.full.src, width: THEME.logo.full.width, height: THEME.logo.full.height, alt: SITE.fullName }] },
   manifest: "/manifest.webmanifest",
   twitter: { card: "summary_large_image" },
   robots: { index: true, follow: true },

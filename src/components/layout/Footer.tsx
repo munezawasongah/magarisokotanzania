@@ -5,12 +5,13 @@ import { getBrowseCounts } from "@/server/browse-counts";
 import { Logo } from "./Header";
 import { formatPhone } from "@/lib/phone";
 import { enumLabel, fmt } from "@/i18n";
+import { browseHref } from "@/lib/browse";
 
 export async function Footer() {
   const { dict, locale } = await getDictionary();
   const browse = await getBrowseCounts([...PRICE_BANDS]).catch(() => ({ makes: [], bodies: [], bands: [] }));
   const cols = [
-    { title: dict.nav.cars, links: [["SUVs", "/cars?body=SUV"], ["Pickups", "/cars?body=PICKUP"], ["4WD", "/cars?fourWd=1"], [dict.listing.importOnOrder, "/cars?importOnly=1"], [dict.hero.twoThreeWheelers, "/cars?body=MOTORCYCLE,THREE_WHEELER"]] },
+    { title: dict.nav.cars, links: [[locale === "sw" ? "Bei za magari" : "Car prices", "/car-prices"], ["SUVs", browseHref.body("SUV")], ["Pickups", browseHref.body("PICKUP")], ["4WD", "/cars?fourWd=1"], [dict.listing.importOnOrder, "/cars?importOnly=1"], [dict.hero.twoThreeWheelers, "/cars?body=MOTORCYCLE,THREE_WHEELER"]] },
     { title: dict.nav.parts, links: [["Toyota", "/parts?make=toyota"], ["Nissan", "/parts?make=nissan"], ["Subaru", "/parts?make=subaru"], [dict.enums.PartCategory.BRAKES, "/parts?category=BRAKES"], [dict.enums.PartCategory.TYRES_WHEELS, "/parts?category=TYRES_WHEELS"]] },
     { title: dict.nav.services, links: [[dict.enums.ServiceCategory.PRE_PURCHASE_INSPECTION, "/services?category=PRE_PURCHASE_INSPECTION"], [dict.enums.ServiceCategory.TOWING, "/services?category=TOWING"], [dict.enums.ServiceCategory.CLEARING_FORWARDING, "/services?category=CLEARING_FORWARDING"], [dict.enums.ServiceCategory.FINANCING, "/services?category=FINANCING"]] },
     { title: SITE.name, links: [[dict.nav.sell, "/sell"], [dict.nav.dealers, "/dealers"], [locale === "sw" ? "Bei za matangazo" : "Pricing for businesses", "/pricing"], [dict.nav.login, "/login"]] },
@@ -20,7 +21,7 @@ export async function Footer() {
     <footer className="mt-20 bg-ink-950 text-center text-ink-300">
       <div className="container py-14">
         <div className="flex flex-col items-center gap-3">
-          <Logo className="h-32 w-32" />
+          <Logo variant="footer" />
           <p className="max-w-md text-sm">{locale === "sw" ? SITE.taglineSw : SITE.taglineEn}</p>
           <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
             <a href={`tel:${SITE.supportPhone}`} className="tabular-nums hover:text-white">{formatPhone(SITE.supportPhone)}</a>
@@ -37,7 +38,7 @@ export async function Footer() {
                 <h2 className="mb-3 text-sm font-semibold text-white">{dict.hero.byMake}</h2>
                 <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
                   {browse.makes.map((m) => (
-                    <li key={m.slug}><Link href={`/cars?make=${m.slug}`} className="hover:text-white">{m.name} <span className="tabular-nums text-ink-300/70">{m.count.toLocaleString()}</span></Link></li>
+                    <li key={m.slug}><Link href={browseHref.make(m.slug)} className="hover:text-white">{m.name} <span className="tabular-nums text-ink-300/70">{m.count.toLocaleString()}</span></Link></li>
                   ))}
                 </ul>
               </nav>
@@ -47,7 +48,7 @@ export async function Footer() {
                 <h2 className="mb-3 text-sm font-semibold text-white">{dict.hero.byBody}</h2>
                 <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
                   {browse.bodies.map((b) => (
-                    <li key={b.body}><Link href={`/cars?body=${b.body}`} className="hover:text-white">{enumLabel(dict, "BodyType", b.body)} <span className="tabular-nums text-ink-300/70">{b.count.toLocaleString()}</span></Link></li>
+                    <li key={b.body}><Link href={browseHref.body(b.body)} className="hover:text-white">{enumLabel(dict, "BodyType", b.body)} <span className="tabular-nums text-ink-300/70">{b.count.toLocaleString()}</span></Link></li>
                   ))}
                 </ul>
               </nav>
